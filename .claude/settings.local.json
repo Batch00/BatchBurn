@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --turbopack --import-alias \"@/*\" --no-src-dir)",
+      "Bash(npm init:*)",
+      "Bash(sed -i 's/\"\"name\"\": \"\".*\"\"/\"\"name\"\": \"\"batchburn\"\"/' package.json)",
+      "Bash(cd /tmp)",
+      "Bash(rm -rf batchburn-init)",
+      "Bash(npx create-next-app@latest batchburn-init --typescript --tailwind --eslint --app --turbopack --import-alias \"@/*\" --no-src-dir)",
+      "Read(//tmp/**)",
+      "Bash(rm -rf .git)",
+      "Bash(cp -r . \"/c/Users/carso/Batch Apps/BatchBurn/\")",
+      "Bash(ls \"/c/Users/carso/Batch Apps/BatchBurn/next\"*)",
+      "Bash(cd:*)"
+    ]
+  }
+}

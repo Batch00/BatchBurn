@@ -16,7 +16,8 @@
       "Bash(do touch:*)",
       "Bash(done)",
       "Bash(npx next:*)",
-      "Bash(npx shadcn@latest add input label --yes)"
+      "Bash(npx shadcn@latest add input label --yes)",
+      "Bash(node -e \":*)"
     ]
   }
 }

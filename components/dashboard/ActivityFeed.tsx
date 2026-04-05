@@ -1,0 +1,114 @@
+import Link from 'next/link'
+import { formatPace, formatDuration } from '@/lib/utils/pace'
+
+const typeColors: Record<string, string> = {
+  Easy: 'border-l-blue-500',
+  Tempo: 'border-l-orange-500',
+  Long: 'border-l-green-700',
+  Fartlek: 'border-l-cyan-500',
+  Hill: 'border-l-yellow-600',
+  Interval: 'border-l-red-500',
+  'Cross Training': 'border-l-purple-500',
+}
+
+const typeBadgeColors: Record<string, string> = {
+  Easy: 'bg-blue-500/15 text-blue-400',
+  Tempo: 'bg-orange-500/15 text-orange-400',
+  Long: 'bg-green-700/15 text-green-400',
+  Fartlek: 'bg-cyan-500/15 text-cyan-400',
+  Hill: 'bg-yellow-600/15 text-yellow-400',
+  Interval: 'bg-red-500/15 text-red-400',
+  'Cross Training': 'bg-purple-500/15 text-purple-400',
+}
+
+export interface Activity {
+  id: string
+  type: string
+  activity_type?: string
+  date: string
+  distance_miles?: number
+  duration_seconds?: number
+  pace_seconds?: number
+  is_run: boolean
+}
+
+interface ActivityFeedProps {
+  activities: Activity[]
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00')
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+export function ActivityFeed({ activities }: ActivityFeedProps) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-xs uppercase tracking-widest text-white/40">
+          Recent Activity
+        </h3>
+        <Link
+          href="/history"
+          className="text-xs text-[#00D4AA] hover:underline"
+        >
+          View all
+        </Link>
+      </div>
+      <div className="space-y-2">
+        {activities.length === 0 && (
+          <p className="py-4 text-center text-sm text-white/30">
+            No activities yet. Log your first run!
+          </p>
+        )}
+        {activities.map((activity) => {
+          const label = activity.is_run
+            ? activity.type
+            : activity.activity_type || 'Cross Training'
+          const borderColor = typeColors[label] || 'border-l-white/20'
+          const badgeColor =
+            typeBadgeColors[label] || 'bg-white/10 text-white/60'
+
+          return (
+            <div
+              key={activity.id}
+              className={`flex items-center justify-between rounded-lg border-l-2 bg-white/[0.03] px-3 py-2.5 ${borderColor}`}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className={`rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
+                >
+                  {label}
+                </span>
+                <span className="text-sm text-white/50">
+                  {formatDate(activity.date)}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                {activity.distance_miles != null && (
+                  <span className="text-white">
+                    {activity.distance_miles.toFixed(1)} mi
+                  </span>
+                )}
+                {activity.duration_seconds != null && (
+                  <span className="text-white/50">
+                    {formatDuration(activity.duration_seconds)}
+                  </span>
+                )}
+                {activity.is_run && activity.pace_seconds != null && (
+                  <span className="text-white/40">
+                    {formatPace(activity.pace_seconds)} /mi
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

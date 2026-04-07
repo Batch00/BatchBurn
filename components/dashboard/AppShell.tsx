@@ -63,7 +63,7 @@ export function AppShell({ userEmail, children }: AppShellProps) {
         {/* Header */}
         <div className="flex h-14 items-center justify-between px-4">
           {!collapsed && (
-            <Link href="/dashboard" className="text-xl font-bold text-[#00D4AA]">
+            <Link href="/dashboard" className="text-xl font-bold text-[#C41230]">
               BatchBurn
             </Link>
           )}
@@ -88,7 +88,7 @@ export function AppShell({ userEmail, children }: AppShellProps) {
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive
-                    ? 'border-l-2 border-[#00D4AA] bg-[#00D4AA]/10 text-[#00D4AA]'
+                    ? 'border-l-2 border-[#C41230] bg-[#C41230]/10 text-[#C41230]'
                     : 'border-l-2 border-transparent text-white/50 hover:bg-white/5 hover:text-white/80'
                 }`}
               >
@@ -130,7 +130,7 @@ export function AppShell({ userEmail, children }: AppShellProps) {
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] ${
-                  isActive ? 'text-[#00D4AA]' : 'text-white/40'
+                  isActive ? 'text-[#C41230]' : 'text-white/40'
                 }`}
               >
                 <Icon className="size-5" />
@@ -142,7 +142,7 @@ export function AppShell({ userEmail, children }: AppShellProps) {
           {/* FAB */}
           <Link
             href="/log"
-            className="flex size-12 -translate-y-3 items-center justify-center rounded-full bg-[#00D4AA] shadow-lg shadow-[#00D4AA]/25"
+            className="flex size-12 -translate-y-3 items-center justify-center rounded-full bg-[#C41230] shadow-lg shadow-[#C41230]/25"
           >
             <Plus className="size-6 text-[#0D1117]" />
           </Link>
@@ -155,7 +155,7 @@ export function AppShell({ userEmail, children }: AppShellProps) {
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] ${
-                  isActive ? 'text-[#00D4AA]' : 'text-white/40'
+                  isActive ? 'text-[#C41230]' : 'text-white/40'
                 }`}
               >
                 <Icon className="size-5" />

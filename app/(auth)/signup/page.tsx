@@ -89,13 +89,13 @@ export default function SignupPage() {
   }
 
   const inputClassName =
-    'border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#00D4AA] focus-visible:ring-[#00D4AA]/20'
+    'border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#C41230] focus-visible:ring-[#C41230]/20'
 
   return (
     <div className="w-full max-w-sm">
       <div className="rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-[#00D4AA]">
+          <h1 className="text-3xl font-bold tracking-tight text-[#C41230]">
             BatchBurn
           </h1>
           <p className="mt-2 text-sm text-white/50">
@@ -177,7 +177,7 @@ export default function SignupPage() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-[#00D4AA] font-semibold text-[#0D1117] hover:bg-[#00D4AA]/90 disabled:opacity-50"
+            className="w-full bg-[#C41230] font-semibold text-white hover:bg-[#A10F29] disabled:opacity-50"
             size="lg"
           >
             {isSubmitting ? 'Creating account...' : 'Sign Up'}
@@ -186,7 +186,7 @@ export default function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-white/50">
           Already have an account?{' '}
-          <Link href="/login" className="text-[#00D4AA] hover:underline">
+          <Link href="/login" className="text-[#C41230] hover:underline">
             Sign in
           </Link>
         </p>

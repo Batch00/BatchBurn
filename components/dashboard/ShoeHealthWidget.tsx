@@ -14,13 +14,13 @@ interface ShoeHealthWidgetProps {
 function getMileageColor(miles: number): string {
   if (miles >= MAX_MILES) return 'text-red-400'
   if (miles >= WARN_MILES) return 'text-amber-400'
-  return 'text-[#00D4AA]'
+  return 'text-[#C41230]'
 }
 
 function getBarColor(miles: number): string {
   if (miles >= MAX_MILES) return 'bg-red-400'
   if (miles >= WARN_MILES) return 'bg-amber-400'
-  return 'bg-[#00D4AA]'
+  return 'bg-[#C41230]'
 }
 
 export function ShoeHealthWidget({ shoes }: ShoeHealthWidgetProps) {

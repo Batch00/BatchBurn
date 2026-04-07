@@ -69,7 +69,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       <div className="rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-[#00D4AA]">
+          <h1 className="text-3xl font-bold tracking-tight text-[#C41230]">
             BatchBurn
           </h1>
           <p className="mt-2 text-sm text-white/50">
@@ -86,7 +86,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               placeholder="you@example.com"
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#00D4AA] focus-visible:ring-[#00D4AA]/20"
+              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#C41230] focus-visible:ring-[#C41230]/20"
               {...register('email')}
             />
             {errors.email && (
@@ -102,7 +102,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               placeholder="••••••••"
-              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#00D4AA] focus-visible:ring-[#00D4AA]/20"
+              className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#C41230] focus-visible:ring-[#C41230]/20"
               {...register('password')}
             />
             {errors.password && (
@@ -117,7 +117,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-[#00D4AA] font-semibold text-[#0D1117] hover:bg-[#00D4AA]/90 disabled:opacity-50"
+            className="w-full bg-[#C41230] font-semibold text-white hover:bg-[#A10F29] disabled:opacity-50"
             size="lg"
           >
             {isSubmitting ? 'Signing in...' : 'Sign In'}
@@ -139,7 +139,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-white/50">
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-[#00D4AA] hover:underline">
+          <Link href="/signup" className="text-[#C41230] hover:underline">
             Sign up
           </Link>
         </p>

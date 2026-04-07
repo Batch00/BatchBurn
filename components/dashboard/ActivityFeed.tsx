@@ -54,7 +54,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
         </h3>
         <Link
           href="/history"
-          className="text-xs text-[#00D4AA] hover:underline"
+          className="text-xs text-[#C41230] hover:underline"
         >
           View all
         </Link>

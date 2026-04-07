@@ -28,7 +28,7 @@ function ProgressRing({
   const circumference = 2 * Math.PI * radius
   const offset = circumference - pct * circumference
 
-  let ringColor = '#00D4AA'
+  let ringColor = '#C41230'
   if (pct >= 1) ringColor = '#22c55e'
   else if (pct >= 0.85) ringColor = '#f59e0b'
 

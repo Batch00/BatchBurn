@@ -59,7 +59,7 @@ export function WeeklyMileageChart({ data }: WeeklyMileageChartProps) {
             width={32}
           />
           <Tooltip content={<CustomTooltip />} cursor={false} />
-          <Bar dataKey="miles" fill="#00D4AA" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="miles" fill="#C41230" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

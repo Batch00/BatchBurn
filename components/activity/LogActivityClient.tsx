@@ -107,7 +107,7 @@ function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
       distance_km: distanceKm,
       duration_seconds: durationSeconds,
       pace_per_mile_seconds: pacePerMileSeconds,
-      type: data.type,
+      run_type: data.type,
       shoe_id: data.shoe_id || null,
       notes: data.notes || null,
       source: 'manual',

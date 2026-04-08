@@ -97,7 +97,7 @@ function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
     setSubmitError(null)
     const supabase = createClient()
     const durationSeconds = data.hours * 3600 + data.minutes * 60 + data.seconds
-    const paceSeconds = Math.round(durationSeconds / data.distance)
+    const pacePerMileSeconds = Math.round(durationSeconds / data.distance)
     const distanceKm = data.distance * 1.60934
 
     const { error } = await supabase.from('runs').insert({
@@ -106,7 +106,7 @@ function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
       distance_miles: data.distance,
       distance_km: distanceKm,
       duration_seconds: durationSeconds,
-      pace_seconds: paceSeconds,
+      pace_per_mile_seconds: pacePerMileSeconds,
       type: data.type,
       shoe_id: data.shoe_id || null,
       notes: data.notes || null,

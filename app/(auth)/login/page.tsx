@@ -123,19 +123,28 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-4">
+        <div className="my-4 border-t border-white/10" />
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-white/80">Try a live demo</p>
+            <p className="text-sm text-white/40">Pre-loaded with sample data. Read-only account.</p>
+          </div>
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={handleDemo}
             disabled={demoLoading}
-            className="w-full border-white/20 text-white/70 hover:bg-white/5"
+            className="w-full border border-white/10 text-white/60 hover:bg-white/5 hover:text-white/80"
             size="lg"
           >
-            {demoLoading ? 'Loading demo...' : 'Try Demo'}
+            {demoLoading ? 'Launching...' : 'Launch Demo'}
           </Button>
         </div>
 
+        <p className="mt-6 text-center text-xs text-white/30">
+          BatchBurn is invite-only. Contact the administrator to request access.
+        </p>
       </div>
     </div>
   )

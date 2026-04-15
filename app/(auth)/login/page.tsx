@@ -126,10 +126,7 @@ export default function LoginPage() {
         <div className="my-4 border-t border-white/10" />
 
         <div className="space-y-3">
-          <div>
-            <p className="text-center text-sm font-medium text-white/80">Try a live demo</p>
-            <p className="text-center text-sm text-white/40">Pre-loaded with sample data. Read-only account.</p>
-          </div>
+          <p className="text-center text-sm text-white/40">Pre-loaded with sample data. Read-only account.</p>
           <Button
             type="button"
             variant="ghost"
@@ -138,7 +135,7 @@ export default function LoginPage() {
             className="w-full border border-white/10 text-white/60 hover:bg-white/5 hover:text-white/80"
             size="lg"
           >
-            {demoLoading ? 'Launching...' : 'Launch Demo'}
+            {demoLoading ? 'Launching...' : 'Try a live demo'}
           </Button>
         </div>
 

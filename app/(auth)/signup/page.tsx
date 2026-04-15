@@ -98,8 +98,11 @@ export default function SignupPage() {
           <h1 className="text-3xl font-bold tracking-tight text-[#C41230]">
             BatchBurn
           </h1>
-          <p className="mt-2 text-sm text-white/50">
-            Create your account
+          <p className="mt-1 text-lg font-semibold text-white">
+            You&apos;ve been invited
+          </p>
+          <p className="mt-1 text-sm text-white/50">
+            Enter your invite code to create your account
           </p>
         </div>
 
@@ -185,9 +188,8 @@ export default function SignupPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-white/50">
-          Already have an account?{' '}
           <Link href="/login" className="text-[#C41230] hover:underline">
-            Sign in
+            ← Back to login
           </Link>
         </p>
       </div>

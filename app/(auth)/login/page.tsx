@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -137,12 +136,6 @@ export default function LoginPage() {
           </Button>
         </div>
 
-        <p className="mt-6 text-center text-sm text-white/50">
-          Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-[#C41230] hover:underline">
-            Sign up
-          </Link>
-        </p>
       </div>
     </div>
   )

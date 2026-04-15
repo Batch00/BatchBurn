@@ -127,8 +127,8 @@ export default function LoginPage() {
 
         <div className="space-y-3">
           <div>
-            <p className="text-sm font-medium text-white/80">Try a live demo</p>
-            <p className="text-sm text-white/40">Pre-loaded with sample data. Read-only account.</p>
+            <p className="text-center text-sm font-medium text-white/80">Try a live demo</p>
+            <p className="text-center text-sm text-white/40">Pre-loaded with sample data. Read-only account.</p>
           </div>
           <Button
             type="button"

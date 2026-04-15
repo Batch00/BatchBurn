@@ -17,7 +17,13 @@
       "Bash(done)",
       "Bash(npx next:*)",
       "Bash(npx shadcn@latest add input label --yes)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(npm install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/c/Users/carso/AppData/Roaming/npm\")",
+      "Bash(npm run:*)",
+      "Bash(NEXT_TURBOPACK=0 npx next build)",
+      "Bash(npm ls:*)",
+      "Bash(npm info:*)"
     ]
   }
 }

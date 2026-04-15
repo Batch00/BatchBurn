@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls app/\\\\\\(app\\\\\\)/log/)",
+      "Bash(cat app/\\\\\\(app\\\\\\)/layout.tsx)",
+      "Bash(ls next.config.*)"
+    ]
+  }
+}

@@ -32,7 +32,7 @@ const navItems = [
 const mobileNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/history', label: 'History', icon: History },
-  { href: '/shoes', label: 'Shoes', icon: Footprints },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

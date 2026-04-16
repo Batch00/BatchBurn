@@ -126,7 +126,6 @@ export default function LoginPage() {
         <div className="my-4 border-t border-white/10" />
 
         <div className="space-y-3">
-          <p className="text-center text-sm text-white/40">Pre-loaded with sample data. Read-only account.</p>
           <Button
             type="button"
             variant="ghost"
@@ -137,6 +136,7 @@ export default function LoginPage() {
           >
             {demoLoading ? 'Launching...' : 'Try a live demo'}
           </Button>
+          <p className="text-center text-sm text-white/40">Pre-loaded with sample data. Read-only account.</p>
         </div>
 
         <p className="mt-6 text-center text-xs text-white/30">

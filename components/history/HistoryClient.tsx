@@ -50,6 +50,13 @@ const BORDER_COLORS: Record<string, string> = {
   Hill: 'border-l-red-500',
   Interval: 'border-l-pink-500',
   'Cross Training': 'border-l-purple-600',
+  Bike: 'border-l-blue-500',
+  Walk: 'border-l-green-600',
+  'Stair Master': 'border-l-orange-500',
+  Swim: 'border-l-cyan-500',
+  Strength: 'border-l-purple-500',
+  Yoga: 'border-l-pink-500',
+  Other: 'border-l-gray-500',
 }
 
 const BADGE_COLORS: Record<string, string> = {
@@ -60,6 +67,13 @@ const BADGE_COLORS: Record<string, string> = {
   Hill: 'bg-red-500/15 text-red-400',
   Interval: 'bg-pink-500/15 text-pink-400',
   'Cross Training': 'bg-purple-600/15 text-purple-400',
+  Bike: 'bg-blue-500/15 text-blue-400',
+  Walk: 'bg-green-600/15 text-green-500',
+  'Stair Master': 'bg-orange-500/15 text-orange-400',
+  Swim: 'bg-cyan-500/15 text-cyan-400',
+  Strength: 'bg-purple-500/15 text-purple-400',
+  Yoga: 'bg-pink-500/15 text-pink-400',
+  Other: 'bg-gray-500/15 text-gray-400',
 }
 
 const RUN_TYPES = ['Easy', 'Tempo', 'Long', 'Fartlek', 'Hill', 'Interval'] as const
@@ -440,9 +454,10 @@ function EditCrossModal({
 interface HistoryClientProps {
   initialActivities: UnifiedActivity[]
   userId: string
+  isDemoUser?: boolean
 }
 
-export function HistoryClient({ initialActivities, userId }: HistoryClientProps) {
+export function HistoryClient({ initialActivities, userId, isDemoUser = false }: HistoryClientProps) {
   const router = useRouter()
   const [filterType, setFilterType] = useState<FilterType>('All')
   const [dateRange, setDateRange] = useState<DateRange>('All Time')
@@ -519,7 +534,7 @@ export function HistoryClient({ initialActivities, userId }: HistoryClientProps)
         cross = rows.slice(0, lim).map((c) => ({
           id: c.id,
           kind: 'cross' as const,
-          label: 'Cross Training',
+          label: (c.activity_type as string) ?? 'Cross Training',
           activity_type: c.activity_type as string,
           date: c.date as string,
           distance_miles: c.distance_miles as number | null,
@@ -754,7 +769,7 @@ export function HistoryClient({ initialActivities, userId }: HistoryClientProps)
                         )}
 
                       {/* More menu */}
-                      <div
+                      {!isDemoUser && <div
                         className="relative"
                         ref={isMenuOpen ? menuRef : null}
                         onClick={(e) => e.stopPropagation()}
@@ -792,7 +807,7 @@ export function HistoryClient({ initialActivities, userId }: HistoryClientProps)
                             </button>
                           </div>
                         )}
-                      </div>
+                      </div>}
                     </div>
                   </div>
 

@@ -8,6 +8,7 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser()
   const userId = user!.id
   const email = user!.email ?? ''
+  const isDemoUser = email === 'demo@batchburn.app'
 
   const { data: profileData } = await supabase
     .from('profiles')
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
         userId={userId}
         email={email}
         displayName={displayName}
+        isDemoUser={isDemoUser}
       />
     </div>
   )

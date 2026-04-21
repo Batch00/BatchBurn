@@ -484,11 +484,32 @@ function CrossTrainingForm({ userId }: { userId: string }) {
 export function LogActivityClient({
   shoes,
   userId,
+  isDemoUser = false,
 }: {
   shoes: Shoe[]
   userId: string
+  isDemoUser?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<'run' | 'cross'>('run')
+
+  if (isDemoUser) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
+        <p className="text-sm text-white/60">
+          Demo accounts cannot log activities.{' '}
+          <a
+            href="https://www.batch-apps.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#00D4AA] underline"
+          >
+            Request access
+          </a>{' '}
+          to create your own account.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-6">

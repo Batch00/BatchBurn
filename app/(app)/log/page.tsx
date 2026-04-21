@@ -7,6 +7,8 @@ export default async function LogPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const isDemoUser = user!.email === 'demo@batchburn.app'
+
   const { data: shoes } = await supabase
     .from('shoes')
     .select('id, name, current_miles')
@@ -17,7 +19,7 @@ export default async function LogPage() {
   return (
     <div className="mx-auto max-w-2xl p-4 md:p-6">
       <h1 className="mb-6 text-2xl font-bold text-white">Log Activity</h1>
-      <LogActivityClient shoes={(shoes ?? []) as Shoe[]} userId={user!.id} />
+      <LogActivityClient shoes={(shoes ?? []) as Shoe[]} userId={user!.id} isDemoUser={isDemoUser} />
     </div>
   )
 }

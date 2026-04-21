@@ -9,6 +9,7 @@ export default async function ShoesPage() {
     data: { user },
   } = await supabase.auth.getUser()
   const userId = user!.id
+  const isDemoUser = user!.email === 'demo@batchburn.app'
 
   const { data: shoesData } = await supabase
     .from('shoes')
@@ -42,7 +43,7 @@ export default async function ShoesPage() {
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">
       <h1 className="mb-6 text-2xl font-bold text-white">Shoes</h1>
-      <ShoesClient initialShoes={initialShoes} userId={userId} />
+      <ShoesClient initialShoes={initialShoes} userId={userId} isDemoUser={isDemoUser} />
     </div>
   )
 }

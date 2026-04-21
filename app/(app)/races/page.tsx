@@ -9,6 +9,7 @@ export default async function RacesPage() {
     data: { user },
   } = await supabase.auth.getUser()
   const userId = user!.id
+  const isDemoUser = user!.email === 'demo@batchburn.app'
 
   const [{ data: racesData }, { data: shoesData }] = await Promise.all([
     supabase
@@ -48,7 +49,7 @@ export default async function RacesPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">
-      <RacesClient initialRaces={races} shoes={shoes} userId={userId} />
+      <RacesClient initialRaces={races} shoes={shoes} userId={userId} isDemoUser={isDemoUser} />
     </div>
   )
 }

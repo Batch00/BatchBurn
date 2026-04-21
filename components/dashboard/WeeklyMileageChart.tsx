@@ -8,15 +8,19 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Cell,
 } from 'recharts'
 
-interface WeekData {
+export interface WeekData {
   week: string
+  weekStart: string
   miles: number
 }
 
 interface WeeklyMileageChartProps {
   data: WeekData[]
+  selectedWeekStart?: string | null
+  onWeekClick?: (weekStart: string) => void
 }
 
 function CustomTooltip({
@@ -37,7 +41,13 @@ function CustomTooltip({
   )
 }
 
-export function WeeklyMileageChart({ data }: WeeklyMileageChartProps) {
+export function WeeklyMileageChart({
+  data,
+  selectedWeekStart,
+  onWeekClick,
+}: WeeklyMileageChartProps) {
+  const hasSelection = !!selectedWeekStart
+
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">
       <h3 className="mb-4 text-xs uppercase tracking-widest text-white/40">
@@ -59,7 +69,21 @@ export function WeeklyMileageChart({ data }: WeeklyMileageChartProps) {
             width={32}
           />
           <Tooltip content={<CustomTooltip />} cursor={false} />
-          <Bar dataKey="miles" fill="#C41230" radius={[4, 4, 0, 0]} />
+          <Bar
+            dataKey="miles"
+            radius={[4, 4, 0, 0]}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onClick={(entry: any) => { if (onWeekClick) onWeekClick(entry.weekStart as string) }}
+            style={onWeekClick ? { cursor: 'pointer' } : undefined}
+          >
+            {data.map((entry) => (
+              <Cell
+                key={entry.weekStart}
+                fill="#C41230"
+                fillOpacity={hasSelection && entry.weekStart !== selectedWeekStart ? 0.35 : 1}
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -9,6 +9,7 @@ export default async function GoalsPage() {
     data: { user },
   } = await supabase.auth.getUser()
   const userId = user!.id
+  const isDemoUser = user!.email === 'demo@batchburn.app'
 
   const { data: goalsData } = await supabase
     .from('goals')
@@ -27,7 +28,7 @@ export default async function GoalsPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">
-      <GoalsClient initialGoals={goals} userId={userId} />
+      <GoalsClient initialGoals={goals} userId={userId} isDemoUser={isDemoUser} />
     </div>
   )
 }

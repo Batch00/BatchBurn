@@ -87,10 +87,12 @@ function ShoeCard({
   shoe,
   userId,
   onRefresh,
+  isDemoUser = false,
 }: {
   shoe: ShoeRow
   userId: string
   onRefresh: () => void
+  isDemoUser?: boolean
 }) {
   const [busy, setBusy] = useState(false)
 
@@ -146,21 +148,23 @@ function ShoeCard({
           )}
         </div>
 
-        <Button
-          onClick={toggleRetired}
-          disabled={busy}
-          size="sm"
-          variant="outline"
-          className="shrink-0 border-white/10 text-white/60 hover:border-white/20 hover:text-white/80"
-        >
-          {busy ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : shoe.is_active ? (
-            'Retire'
-          ) : (
-            'Reactivate'
-          )}
-        </Button>
+        {!isDemoUser && (
+          <Button
+            onClick={toggleRetired}
+            disabled={busy}
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-white/10 text-white/60 hover:border-white/20 hover:text-white/80"
+          >
+            {busy ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : shoe.is_active ? (
+              'Retire'
+            ) : (
+              'Reactivate'
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Mileage */}
@@ -357,9 +361,10 @@ function AddShoeForm({
 interface ShoesClientProps {
   initialShoes: ShoeRow[]
   userId: string
+  isDemoUser?: boolean
 }
 
-export function ShoesClient({ initialShoes, userId }: ShoesClientProps) {
+export function ShoesClient({ initialShoes, userId, isDemoUser = false }: ShoesClientProps) {
   const [shoes, setShoes] = useState<ShoeRow[]>(initialShoes)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -412,7 +417,7 @@ export function ShoesClient({ initialShoes, userId }: ShoesClientProps) {
           {loading && <Loader2 className="ml-2 inline size-3.5 animate-spin" />}
         </p>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+        {!isDemoUser && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#C41230] px-2.5 text-sm font-medium text-white transition-colors hover:bg-[#A10F29] focus:outline-none">
             <Plus className="size-4" />
             Add Shoe
@@ -429,7 +434,7 @@ export function ShoesClient({ initialShoes, userId }: ShoesClientProps) {
               }}
             />
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {/* Active shoes */}
@@ -443,6 +448,7 @@ export function ShoesClient({ initialShoes, userId }: ShoesClientProps) {
                 shoe={shoe}
                 userId={userId}
                 onRefresh={fetchShoes}
+                isDemoUser={isDemoUser}
               />
             ))}
           </div>
@@ -460,6 +466,7 @@ export function ShoesClient({ initialShoes, userId }: ShoesClientProps) {
                 shoe={shoe}
                 userId={userId}
                 onRefresh={fetchShoes}
+                isDemoUser={isDemoUser}
               />
             ))}
           </div>

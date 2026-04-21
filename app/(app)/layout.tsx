@@ -15,9 +15,11 @@ export default async function AppLayout({
     redirect('/login')
   }
 
+  const isDemoUser = user.email === 'demo@batchburn.app'
+
   return (
     <>
-      <AppShell userEmail={user.email ?? ''}>{children}</AppShell>
+      <AppShell userEmail={user.email ?? ''} isDemoUser={isDemoUser}>{children}</AppShell>
       <Toaster />
     </>
   )

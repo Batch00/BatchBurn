@@ -68,6 +68,9 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       <div className="rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur">
         <div className="mb-8 text-center">
+          <div className="mb-3 flex justify-center">
+            <img src="/logo.svg" alt="BatchBurn" className="size-12" />
+          </div>
           <h1 className="text-3xl font-bold tracking-tight text-[#C41230]">
             BatchBurn
           </h1>

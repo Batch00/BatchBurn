@@ -2,10 +2,10 @@ export const revalidate = 0
 
 import { createClient } from '@/lib/supabase/server'
 import { KpiCard } from '@/components/dashboard/KpiCard'
-import { WeeklyMileageChart } from '@/components/dashboard/WeeklyMileageChart'
-import { ActivityFeed, type Activity } from '@/components/dashboard/ActivityFeed'
+import { DashboardClient, type WeekBucket, type RawWeeklyRun, type RawWeeklyCross } from '@/components/dashboard/DashboardClient'
 import { ShoeHealthWidget, type Shoe } from '@/components/dashboard/ShoeHealthWidget'
 import { GoalProgress, type Goal } from '@/components/dashboard/GoalProgress'
+import { type Activity } from '@/components/dashboard/ActivityFeed'
 import { formatPace } from '@/lib/utils/pace'
 
 function getMonday(d: Date): Date {
@@ -46,6 +46,7 @@ export default async function DashboardPage() {
     { data: recentRuns },
     { data: recentCross },
     { data: weeklyRuns },
+    { data: weeklyCross },
     { data: shoes },
     { data: goals },
   ] = await Promise.all([
@@ -70,24 +71,32 @@ export default async function DashboardPage() {
       .eq('user_id', userId)
       .gte('date', toDateStr(yearStart))
       .lte('date', toDateStr(now)),
-    // Last 5 runs
+    // Last 20 recent runs for activity feed
     supabase
       .from('runs')
       .select('id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds')
       .eq('user_id', userId)
       .order('date', { ascending: false })
-      .limit(5),
-    // Last 5 cross training
+      .limit(20),
+    // Last 20 recent cross training for activity feed
     supabase
       .from('cross_training')
       .select('id, activity_type, date, distance_miles, duration_seconds')
       .eq('user_id', userId)
       .order('date', { ascending: false })
-      .limit(5),
-    // 12 weeks of runs for chart
+      .limit(20),
+    // 12 weeks of runs for chart (with run_type)
     supabase
       .from('runs')
-      .select('date, distance_miles')
+      .select('date, distance_miles, run_type')
+      .eq('user_id', userId)
+      .gte('date', toDateStr(twelveWeeksAgo))
+      .lte('date', toDateStr(now))
+      .order('date', { ascending: true }),
+    // 12 weeks of cross training for chart
+    supabase
+      .from('cross_training')
+      .select('date, distance_miles, activity_type')
       .eq('user_id', userId)
       .gte('date', toDateStr(twelveWeeksAgo))
       .lte('date', toDateStr(now))
@@ -111,7 +120,7 @@ export default async function DashboardPage() {
   const mtdMiles = (mtdRuns ?? []).reduce((s, r) => s + (r.distance_miles ?? 0), 0)
   const ytdMiles = (ytdRuns ?? []).reduce((s, r) => s + (r.distance_miles ?? 0), 0)
 
-  // Weighted avg pace this week: SUM(pace * miles) / SUM(miles)
+  // Weighted avg pace this week
   const wtdRunsWithPace = (wtdRuns ?? []).filter(
     (r) => r.pace_per_mile_seconds != null && (r.distance_miles ?? 0) > 0,
   )
@@ -122,28 +131,24 @@ export default async function DashboardPage() {
   const totalMilesForPace = wtdRunsWithPace.reduce((s, r) => s + r.distance_miles!, 0)
   const avgPace = totalMilesForPace > 0 ? totalWeightedPace / totalMilesForPace : 0
 
-  // Build weekly chart data
-  const weeklyChartData: { week: string; miles: number }[] = []
-  for (let i = 0; i < 12; i++) {
+  // Build week buckets
+  const weekBuckets: WeekBucket[] = Array.from({ length: 12 }, (_, i) => {
     const weekStart = new Date(twelveWeeksAgo)
     weekStart.setDate(weekStart.getDate() + i * 7)
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 6)
-    const startStr = toDateStr(weekStart)
-    const endStr = toDateStr(weekEnd)
+    return {
+      label: getWeekLabel(toDateStr(weekStart)),
+      start: toDateStr(weekStart),
+      end: toDateStr(weekEnd),
+    }
+  })
 
-    const miles = (weeklyRuns ?? [])
-      .filter((r) => r.date >= startStr && r.date <= endStr)
-      .reduce((s, r) => s + (r.distance_miles ?? 0), 0)
-
-    weeklyChartData.push({ week: getWeekLabel(startStr), miles })
-  }
-
-  // Merge recent activities
-  const activities: Activity[] = [
+  // Merge recent activities (last 20 of each, sorted by date)
+  const allActivities: Activity[] = [
     ...(recentRuns ?? []).map((r) => ({
       id: r.id,
-      type: r.run_type,
+      type: r.run_type ?? 'Easy',
       date: r.date,
       distance_miles: r.distance_miles,
       duration_seconds: r.duration_seconds,
@@ -159,9 +164,19 @@ export default async function DashboardPage() {
       duration_seconds: c.duration_seconds,
       is_run: false,
     })),
-  ]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 5)
+  ].sort((a, b) => b.date.localeCompare(a.date))
+
+  const rawWeeklyRuns: RawWeeklyRun[] = (weeklyRuns ?? []).map((r) => ({
+    date: r.date as string,
+    distance_miles: r.distance_miles as number | null,
+    run_type: r.run_type as string | null,
+  }))
+
+  const rawWeeklyCross: RawWeeklyCross[] = (weeklyCross ?? []).map((c) => ({
+    date: c.date as string,
+    distance_miles: c.distance_miles as number | null,
+    activity_type: c.activity_type as string | null,
+  }))
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
@@ -192,11 +207,13 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Chart + Activity Feed */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <WeeklyMileageChart data={weeklyChartData} />
-        <ActivityFeed activities={activities} />
-      </div>
+      {/* Filter chips + Chart + Activity Feed (client-side filtering) */}
+      <DashboardClient
+        weeklyRuns={rawWeeklyRuns}
+        weeklyCross={rawWeeklyCross}
+        weekBuckets={weekBuckets}
+        allActivities={allActivities}
+      />
 
       {/* Shoe Health + Goals */}
       <div className="grid gap-4 lg:grid-cols-2">

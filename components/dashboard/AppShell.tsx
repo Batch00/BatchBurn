@@ -48,10 +48,11 @@ const moreSheetItems = [
 
 interface AppShellProps {
   userEmail: string
+  isDemoUser?: boolean
   children: React.ReactNode
 }
 
-export function AppShell({ userEmail, children }: AppShellProps) {
+export function AppShell({ userEmail, isDemoUser = false, children }: AppShellProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
@@ -74,8 +75,9 @@ export function AppShell({ userEmail, children }: AppShellProps) {
         {/* Header */}
         <div className="flex h-14 items-center justify-between px-4">
           {!collapsed && (
-            <Link href="/dashboard" prefetch={true} className="text-xl font-bold text-[#C41230]">
-              BatchBurn
+            <Link href="/dashboard" prefetch={true} className="flex items-center gap-2">
+              <img src="/logo.svg" alt="" className="size-7 shrink-0" />
+              <span className="text-xl font-bold text-[#C41230]">BatchBurn</span>
             </Link>
           )}
           <button
@@ -128,6 +130,20 @@ export function AppShell({ userEmail, children }: AppShellProps) {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+        {isDemoUser && (
+          <div className="border-b border-amber-700/50 bg-amber-900/40 py-2 text-center text-sm text-amber-200">
+            You are in demo mode — data resets nightly.{' '}
+            <a
+              href="https://www.batch-apps.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-amber-100"
+            >
+              Request access at batch-apps.com
+            </a>{' '}
+            to get your own account.
+          </div>
+        )}
         {children}
       </main>
 

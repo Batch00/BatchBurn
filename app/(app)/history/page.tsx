@@ -9,6 +9,7 @@ export default async function HistoryPage() {
     data: { user },
   } = await supabase.auth.getUser()
   const userId = user!.id
+  const isDemoUser = user!.email === 'demo@batchburn.app'
 
   const [{ data: runs }, { data: cross }] = await Promise.all([
     supabase
@@ -47,7 +48,7 @@ export default async function HistoryPage() {
   const crossActivities: UnifiedActivity[] = (cross ?? []).map((c) => ({
     id: c.id as string,
     kind: 'cross' as const,
-    label: 'Cross Training',
+    label: (c.activity_type as string) ?? 'Cross Training',
     activity_type: c.activity_type as string,
     date: c.date as string,
     distance_miles: c.distance_miles as number | null,
@@ -62,7 +63,7 @@ export default async function HistoryPage() {
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">
       <h1 className="mb-6 text-2xl font-bold text-white">History</h1>
-      <HistoryClient initialActivities={initialActivities} userId={userId} />
+      <HistoryClient initialActivities={initialActivities} userId={userId} isDemoUser={isDemoUser} />
     </div>
   )
 }

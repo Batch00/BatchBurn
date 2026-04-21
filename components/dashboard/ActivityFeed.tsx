@@ -9,6 +9,13 @@ const typeColors: Record<string, string> = {
   Hill: 'border-l-yellow-600',
   Interval: 'border-l-red-500',
   'Cross Training': 'border-l-purple-500',
+  Bike: 'border-l-blue-500',
+  Walk: 'border-l-green-600',
+  'Stair Master': 'border-l-orange-500',
+  Swim: 'border-l-cyan-500',
+  Strength: 'border-l-purple-500',
+  Yoga: 'border-l-pink-500',
+  Other: 'border-l-gray-500',
 }
 
 const typeBadgeColors: Record<string, string> = {
@@ -19,6 +26,13 @@ const typeBadgeColors: Record<string, string> = {
   Hill: 'bg-yellow-600/15 text-yellow-400',
   Interval: 'bg-red-500/15 text-red-400',
   'Cross Training': 'bg-purple-500/15 text-purple-400',
+  Bike: 'bg-blue-500/15 text-blue-400',
+  Walk: 'bg-green-600/15 text-green-500',
+  'Stair Master': 'bg-orange-500/15 text-orange-400',
+  Swim: 'bg-cyan-500/15 text-cyan-400',
+  Strength: 'bg-purple-500/15 text-purple-400',
+  Yoga: 'bg-pink-500/15 text-pink-400',
+  Other: 'bg-gray-500/15 text-gray-400',
 }
 
 export interface Activity {

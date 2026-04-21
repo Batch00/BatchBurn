@@ -50,12 +50,14 @@ interface SettingsClientProps {
   userId: string
   email: string
   displayName: string
+  isDemoUser?: boolean
 }
 
 export function SettingsClient({
   userId,
   email,
   displayName: initialDisplayName,
+  isDemoUser = false,
 }: SettingsClientProps) {
   const router = useRouter()
 
@@ -128,17 +130,20 @@ export function SettingsClient({
             <Input
               id="display-name"
               value={nameValue}
-              onChange={(e) => setNameValue(e.target.value)}
+              onChange={(e) => !isDemoUser && setNameValue(e.target.value)}
               placeholder="Your name"
-              className={inputCls}
+              readOnly={isDemoUser}
+              className={isDemoUser ? `${inputCls} cursor-not-allowed opacity-60` : inputCls}
             />
-            <Button
-              onClick={saveDisplayName}
-              disabled={nameSaving}
-              className="shrink-0 bg-[#C41230] text-white hover:bg-[#A10F29] disabled:opacity-50"
-            >
-              {nameSaving ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
-            </Button>
+            {!isDemoUser && (
+              <Button
+                onClick={saveDisplayName}
+                disabled={nameSaving}
+                className="shrink-0 bg-[#C41230] text-white hover:bg-[#A10F29] disabled:opacity-50"
+              >
+                {nameSaving ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -153,21 +158,23 @@ export function SettingsClient({
       {/* Account */}
       <Section title="Account">
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button
-            onClick={changePassword}
-            disabled={pwBusy}
-            variant="outline"
-            className="border-white/10 text-white/70 hover:border-white/20 hover:text-white disabled:opacity-50"
-          >
-            {pwBusy ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="size-4 animate-spin" />
-                Sending…
-              </span>
-            ) : (
-              'Change Password'
-            )}
-          </Button>
+          {!isDemoUser && (
+            <Button
+              onClick={changePassword}
+              disabled={pwBusy}
+              variant="outline"
+              className="border-white/10 text-white/70 hover:border-white/20 hover:text-white disabled:opacity-50"
+            >
+              {pwBusy ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  Sending…
+                </span>
+              ) : (
+                'Change Password'
+              )}
+            </Button>
+          )}
 
           <Button
             onClick={signOut}
@@ -211,7 +218,7 @@ export function SettingsClient({
           <div className="flex items-center justify-between text-white/50">
             <span>Website</span>
             <a
-              href="https://batch-apps.com"
+              href="https://www.batch-apps.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#00D4AA] hover:underline"
@@ -232,7 +239,7 @@ export function SettingsClient({
       )}
 
       {/* Danger Zone */}
-      <Section title="Danger Zone">
+      {!isDemoUser && <Section title="Danger Zone">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white">Delete All My Data</p>
@@ -277,7 +284,7 @@ export function SettingsClient({
             </DialogContent>
           </Dialog>
         </div>
-      </Section>
+      </Section>}
     </div>
   )
 }

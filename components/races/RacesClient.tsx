@@ -405,9 +405,10 @@ interface RacesClientProps {
   initialRaces: RaceRow[]
   shoes: ShoeOption[]
   userId: string
+  isDemoUser?: boolean
 }
 
-export function RacesClient({ initialRaces, shoes, userId }: RacesClientProps) {
+export function RacesClient({ initialRaces, shoes, userId, isDemoUser = false }: RacesClientProps) {
   const [races, setRaces] = useState<RaceRow[]>(initialRaces)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -453,7 +454,7 @@ export function RacesClient({ initialRaces, shoes, userId }: RacesClientProps) {
           {loading && <Loader2 className="ml-2 inline size-4 animate-spin text-white/40" />}
         </h1>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+        {!isDemoUser && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#C41230] px-3 text-sm font-medium text-white transition-colors hover:bg-[#A10F29] focus:outline-none">
             <Plus className="size-4" />
             Add Race
@@ -471,7 +472,7 @@ export function RacesClient({ initialRaces, shoes, userId }: RacesClientProps) {
               }}
             />
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {/* Race list */}

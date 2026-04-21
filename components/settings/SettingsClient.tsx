@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -221,6 +222,14 @@ export function SettingsClient({
           <p className="text-xs text-white/30">Part of the Batch ecosystem</p>
         </div>
       </Section>
+
+      {email === 'carsonb1723@gmail.com' && (
+        <div className="pt-2 text-center">
+          <Link href="/admin" className="text-xs text-white/40 hover:text-white/60">
+            Admin
+          </Link>
+        </div>
+      )}
 
       {/* Danger Zone */}
       <Section title="Danger Zone">

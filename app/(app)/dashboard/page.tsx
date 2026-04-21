@@ -1,4 +1,4 @@
-export const revalidate = 30
+export const revalidate = 0
 
 import { createClient } from '@/lib/supabase/server'
 import { KpiCard } from '@/components/dashboard/KpiCard'
@@ -52,7 +52,7 @@ export default async function DashboardPage() {
     // WTD runs
     supabase
       .from('runs')
-      .select('distance_miles')
+      .select('distance_miles, pace_per_mile_seconds')
       .eq('user_id', userId)
       .gte('date', toDateStr(monday))
       .lte('date', toDateStr(now)),
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
     // Last 5 runs
     supabase
       .from('runs')
-      .select('id, type, date, distance_miles, duration_seconds, pace_seconds')
+      .select('id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(5),
@@ -111,12 +111,16 @@ export default async function DashboardPage() {
   const mtdMiles = (mtdRuns ?? []).reduce((s, r) => s + (r.distance_miles ?? 0), 0)
   const ytdMiles = (ytdRuns ?? []).reduce((s, r) => s + (r.distance_miles ?? 0), 0)
 
-  // Avg pace this week from recent runs that fall within the current week
-  const weekRuns = (recentRuns ?? []).filter((r) => r.date >= toDateStr(monday))
-  const avgPace =
-    weekRuns.length > 0
-      ? weekRuns.reduce((s, r) => s + (r.pace_seconds ?? 0), 0) / weekRuns.length
-      : 0
+  // Weighted avg pace this week: SUM(pace * miles) / SUM(miles)
+  const wtdRunsWithPace = (wtdRuns ?? []).filter(
+    (r) => r.pace_per_mile_seconds != null && (r.distance_miles ?? 0) > 0,
+  )
+  const totalWeightedPace = wtdRunsWithPace.reduce(
+    (s, r) => s + r.pace_per_mile_seconds! * r.distance_miles!,
+    0,
+  )
+  const totalMilesForPace = wtdRunsWithPace.reduce((s, r) => s + r.distance_miles!, 0)
+  const avgPace = totalMilesForPace > 0 ? totalWeightedPace / totalMilesForPace : 0
 
   // Build weekly chart data
   const weeklyChartData: { week: string; miles: number }[] = []
@@ -139,11 +143,11 @@ export default async function DashboardPage() {
   const activities: Activity[] = [
     ...(recentRuns ?? []).map((r) => ({
       id: r.id,
-      type: r.type,
+      type: r.run_type,
       date: r.date,
       distance_miles: r.distance_miles,
       duration_seconds: r.duration_seconds,
-      pace_seconds: r.pace_seconds,
+      pace_seconds: r.pace_per_mile_seconds,
       is_run: true,
     })),
     ...(recentCross ?? []).map((c) => ({

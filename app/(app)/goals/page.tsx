@@ -1,3 +1,5 @@
+export const revalidate = 0
+
 import { createClient } from '@/lib/supabase/server'
 import { GoalsClient, type GoalRow } from '@/components/goals/GoalsClient'
 

@@ -127,13 +127,16 @@ export function AppShell({ userEmail, children }: AppShellProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
         {children}
       </main>
 
       {/* Mobile Bottom Nav */}
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#0D1117]/95 backdrop-blur md:hidden">
-        <nav className="flex items-center justify-around px-2 py-2">
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 h-20 border-t border-white/10 bg-[#0D1117]/95 pt-3 backdrop-blur md:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <nav className="flex items-center justify-around px-2">
           {/* Dashboard + History (left of FAB) */}
           {mobileNavItems.slice(0, 2).map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')

@@ -1,3 +1,5 @@
+export const revalidate = 0
+
 import { createClient } from '@/lib/supabase/server'
 import { HistoryClient, type UnifiedActivity } from '@/components/history/HistoryClient'
 
@@ -12,7 +14,7 @@ export default async function HistoryPage() {
     supabase
       .from('runs')
       .select(
-        'id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds, notes, shoes(name)',
+        'id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds, notes, shoe_id, shoes(name)',
       )
       .eq('user_id', userId)
       .order('date', { ascending: false })
@@ -29,11 +31,13 @@ export default async function HistoryPage() {
     id: r.id as string,
     kind: 'run' as const,
     label: (r.run_type as string) ?? 'Easy',
+    run_type: (r.run_type as string) ?? 'Easy',
     date: r.date as string,
     distance_miles: r.distance_miles as number | null,
     duration_seconds: r.duration_seconds as number | null,
     pace_per_mile_seconds: r.pace_per_mile_seconds as number | null,
     notes: r.notes as string | null,
+    shoe_id: r.shoe_id as string | null,
     shoe_name:
       r.shoes && !Array.isArray(r.shoes)
         ? (r.shoes as { name: string }).name
@@ -44,6 +48,7 @@ export default async function HistoryPage() {
     id: c.id as string,
     kind: 'cross' as const,
     label: 'Cross Training',
+    activity_type: c.activity_type as string,
     date: c.date as string,
     distance_miles: c.distance_miles as number | null,
     duration_seconds: c.duration_seconds as number | null,

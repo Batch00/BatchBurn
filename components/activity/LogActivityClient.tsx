@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { formatPace } from '@/lib/utils/pace'
 import { toast } from '@/lib/hooks/use-toast'
+import { revalidateAll } from '@/lib/actions'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -119,6 +120,7 @@ function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
     }
 
     toast('Run logged successfully!')
+    await revalidateAll()
     reset({ date: todayStr(), type: 'Easy', shoe_id: '', notes: '' })
     setTimeout(() => router.push('/dashboard'), 1500)
   }
@@ -336,6 +338,7 @@ function CrossTrainingForm({ userId }: { userId: string }) {
     }
 
     toast('Activity logged successfully!')
+    await revalidateAll()
     reset({ date: todayStr(), activity_type: 'Bike', notes: '' })
   }
 

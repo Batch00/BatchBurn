@@ -51,6 +51,7 @@ export default function LoginPage() {
     setError(null)
     setDemoLoading(true)
     const supabase = createClient()
+    await supabase.auth.signOut()
     const { error } = await supabase.auth.signInWithPassword({
       email: 'demo@batchburn.app',
       password: 'demo1234',

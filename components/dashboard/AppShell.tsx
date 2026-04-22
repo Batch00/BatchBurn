@@ -18,6 +18,7 @@ import {
   Menu,
   LayoutGrid,
   Clock,
+  Flame,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -76,7 +77,7 @@ export function AppShell({ userEmail, isDemoUser = false, children }: AppShellPr
         <div className="flex h-14 items-center justify-between px-4">
           {!collapsed && (
             <Link href="/dashboard" prefetch={true} className="flex items-center gap-2">
-              <img src="/logo.svg" alt="" className="size-7 shrink-0" />
+              <Flame className="size-6 shrink-0 text-[#C41230]" />
               <span className="text-xl font-bold text-[#C41230]">BatchBurn</span>
             </Link>
           )}

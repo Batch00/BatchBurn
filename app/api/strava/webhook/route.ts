@@ -5,16 +5,18 @@ import { getValidToken } from '@/lib/strava/token'
 import { mapStravaActivity } from '@/lib/strava/mapper'
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const mode = searchParams.get('hub.mode')
-  const token = searchParams.get('hub.verify_token')
-  const challenge = searchParams.get('hub.challenge')
+  const url = new URL(request.url)
+  const mode = url.searchParams.get('hub.mode')
+  const token = url.searchParams.get('hub.verify_token')
+  const challenge = url.searchParams.get('hub.challenge')
 
-  if (mode === 'subscribe' && token === STRAVA_CONFIG.webhookVerifyToken) {
-    return NextResponse.json({ 'hub.challenge': challenge })
+  console.log('Strava webhook verify:', { received: token, expected: process.env.STRAVA_WEBHOOK_VERIFY_TOKEN })
+
+  if (mode === 'subscribe' && token === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
+    return NextResponse.json({ 'hub.challenge': challenge }, { status: 200 })
   }
 
-  return new NextResponse('Forbidden', { status: 403 })
+  return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 }
 
 export async function POST(request: NextRequest) {

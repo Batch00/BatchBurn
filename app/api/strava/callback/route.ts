@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { STRAVA_CONFIG } from '@/lib/strava/config'
 import { saveStravaTokens } from '@/lib/strava/token'
-import { importStravaHistory } from '@/lib/strava/import'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -52,11 +51,6 @@ export async function GET(request: NextRequest) {
     console.error('Strava callback — saveStravaTokens failed:', err)
     return NextResponse.redirect(`${appUrl}/settings?strava=error`)
   }
-
-  // Fire-and-forget — import runs in background, redirect immediately
-  importStravaHistory(user.id, tokenData.access_token).catch((err) =>
-    console.error('Strava callback — importStravaHistory failed:', err)
-  )
 
   return NextResponse.redirect(`${appUrl}/settings?strava=connected`)
 }

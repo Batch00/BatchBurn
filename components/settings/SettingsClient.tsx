@@ -82,15 +82,33 @@ export function SettingsClient({
   const [stravaConnected, setStravaConnected] = useState(!!stravaAthleteId)
   const [stravaId, setStravaId] = useState(stravaAthleteId)
   const [stravaDisconnecting, setStravaDisconnecting] = useState(false)
+  const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle')
+  const [importCount, setImportCount] = useState(0)
 
   // Password reset
   const [pwBusy, setPwBusy] = useState(false)
 
+  async function runImport() {
+    setImportStatus('importing')
+    try {
+      const res = await fetch('/api/strava/import', { method: 'POST' })
+      if (!res.ok) throw new Error('non-ok response')
+      const data = await res.json()
+      setImportCount(data.imported ?? 0)
+      setImportStatus('success')
+    } catch {
+      console.error('Strava import failed')
+      setImportStatus('error')
+    }
+  }
+
   useEffect(() => {
     if (stravaStatus === 'connected') {
-      toast('Strava connected! Importing your activities…')
+      router.replace('/settings', { scroll: false })
+      void runImport()
     }
-  }, [stravaStatus])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function saveDisplayName() {
     setNameSaving(true)
@@ -218,35 +236,63 @@ export function SettingsClient({
 
       {/* Integrations */}
       <Section title="Integrations">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
             <p className="text-sm font-medium text-white">Strava</p>
             <p className="text-xs text-white/40">Sync your activities automatically</p>
+            {stravaConnected && importStatus === 'importing' && (
+              <p className="flex items-center gap-1.5 text-xs text-white/60">
+                <Loader2 className="size-3 animate-spin" />
+                Importing your Strava activities…
+              </p>
+            )}
+            {stravaConnected && importStatus === 'success' && (
+              <p className="text-xs text-green-400">
+                Import complete — {importCount} {importCount === 1 ? 'activity' : 'activities'} synced!
+              </p>
+            )}
+            {stravaConnected && importStatus === 'error' && (
+              <p className="text-xs text-red-400">Import failed. Try syncing manually.</p>
+            )}
           </div>
+
           {isDemoUser ? (
-            <span className="text-xs text-white/30">Not available in demo</span>
+            <span className="shrink-0 text-xs text-white/30">Not available in demo</span>
           ) : stravaConnected ? (
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-green-400">
-                Connected {stravaId ? `(#${stravaId})` : ''}
-              </span>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-green-400">
+                  Connected {stravaId ? `(#${stravaId})` : ''}
+                </span>
+                <Button
+                  onClick={disconnectStrava}
+                  disabled={stravaDisconnecting}
+                  variant="outline"
+                  className="border-red-500/30 text-red-400 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                >
+                  {stravaDisconnecting ? <Loader2 className="size-4 animate-spin" /> : 'Disconnect'}
+                </Button>
+              </div>
               <Button
-                onClick={disconnectStrava}
-                disabled={stravaDisconnecting}
+                onClick={runImport}
+                disabled={importStatus === 'importing'}
                 variant="outline"
-                className="border-red-500/30 text-red-400 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                className="border-white/10 text-white/70 hover:border-white/20 hover:text-white disabled:opacity-50"
               >
-                {stravaDisconnecting ? (
-                  <Loader2 className="size-4 animate-spin" />
+                {importStatus === 'importing' ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="size-4 animate-spin" />
+                    Syncing…
+                  </span>
                 ) : (
-                  'Disconnect'
+                  'Sync Now'
                 )}
               </Button>
             </div>
           ) : (
             <a
               href={STRAVA_AUTH_URL}
-              className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-background px-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white"
+              className="inline-flex h-8 shrink-0 items-center rounded-lg border border-white/10 bg-background px-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white"
             >
               Connect Strava
             </a>

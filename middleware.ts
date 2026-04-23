@@ -6,10 +6,12 @@ const publicPaths = ['/login', '/signup', '/auth/callback']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow public paths, static assets, and unauthenticated API routes
+  // Allow public paths and unauthenticated Strava API routes (webhook + callback)
+  // /api/strava/import is intentionally excluded — it requires auth
+  const stravaPublic = ['/api/strava/webhook', '/api/strava/callback']
   if (
     publicPaths.some((p) => pathname.startsWith(p)) ||
-    pathname.startsWith('/api/strava/')
+    stravaPublic.some((p) => pathname.startsWith(p))
   ) {
     return NextResponse.next({ request })
   }

@@ -6,8 +6,11 @@ const publicPaths = ['/login', '/signup', '/auth/callback']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow public paths and static assets
-  if (publicPaths.some((p) => pathname.startsWith(p))) {
+  // Allow public paths, static assets, and unauthenticated API routes
+  if (
+    publicPaths.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith('/api/strava/')
+  ) {
     return NextResponse.next({ request })
   }
 

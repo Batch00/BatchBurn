@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, MoreHorizontal } from 'lucide-react'
+import { Loader2, MoreHorizontal, Zap } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatPace, formatDuration } from '@/lib/utils/pace'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 type FilterType = 'All' | 'Runs' | 'Cross Training'
 type DateRange = 'This Week' | 'This Month' | 'This Year' | 'All Time'
+type SourceFilter = 'All' | 'Strava'
 
 export type UnifiedActivity = {
   id: string
@@ -34,6 +35,7 @@ export type UnifiedActivity = {
   shoe_id?: string | null
   activity_type?: string | null
   run_type?: string | null
+  source?: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -461,6 +463,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
   const router = useRouter()
   const [filterType, setFilterType] = useState<FilterType>('All')
   const [dateRange, setDateRange] = useState<DateRange>('All Time')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('All')
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [activities, setActivities] = useState<UnifiedActivity[]>(initialActivities)
   const [hasMore, setHasMore] = useState(false)
@@ -492,7 +495,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
       if (type !== 'Cross Training') {
         let q = supabase
           .from('runs')
-          .select('id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds, notes, shoe_id, shoes(name)')
+          .select('id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds, notes, shoe_id, source, shoes(name)')
           .eq('user_id', userId)
           .order('date', { ascending: false })
           .limit(fetchLimit)
@@ -512,6 +515,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
           pace_per_mile_seconds: r.pace_per_mile_seconds as number | null,
           notes: r.notes as string | null,
           shoe_id: r.shoe_id as string | null,
+          source: r.source as string | null,
           shoe_name:
             r.shoes && !Array.isArray(r.shoes)
               ? (r.shoes as { name: string }).name
@@ -522,7 +526,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
       if (type !== 'Runs') {
         let q = supabase
           .from('cross_training')
-          .select('id, activity_type, date, distance_miles, duration_seconds, notes')
+          .select('id, activity_type, date, distance_miles, duration_seconds, notes, source')
           .eq('user_id', userId)
           .order('date', { ascending: false })
           .limit(fetchLimit)
@@ -540,6 +544,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
           distance_miles: c.distance_miles as number | null,
           duration_seconds: c.duration_seconds as number | null,
           notes: c.notes as string | null,
+          source: c.source as string | null,
         }))
       }
 
@@ -623,7 +628,11 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
     fetchActivities(filterType, dateRange, limit)
   }
 
-  const displayActivities = clientFetched ? activities : initialActivities
+  const baseActivities = clientFetched ? activities : initialActivities
+  const displayActivities =
+    sourceFilter === 'Strava'
+      ? baseActivities.filter((a) => a.source === 'strava')
+      : baseActivities
 
   return (
     <div className="space-y-4">
@@ -676,6 +685,24 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
               }`}
             >
               {r}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+          {(['All', 'Strava'] as SourceFilter[]).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSourceFilter(s)}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                sourceFilter === s
+                  ? 'bg-[#FC4C02] text-white'
+                  : 'bg-white/5 text-white/60 hover:text-white/80'
+              }`}
+            >
+              {s === 'Strava' && <Zap className="size-3" />}
+              {s === 'Strava' ? 'Strava' : 'All Sources'}
             </button>
           ))}
         </div>
@@ -738,12 +765,21 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
                 >
                   <div className="flex items-center justify-between">
                     {/* Left: badge + date */}
-                    <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
                       <span
                         className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
                       >
                         {activity.label}
                       </span>
+                      {activity.source === 'strava' && (
+                        <span
+                          title="Synced from Strava"
+                          aria-label="Synced from Strava"
+                          className="shrink-0"
+                        >
+                          <Zap className="size-3 text-[#FC4C02]" fill="#FC4C02" />
+                        </span>
+                      )}
                       <span className="truncate text-sm text-white/50">
                         {formatDate(activity.date)}
                       </span>

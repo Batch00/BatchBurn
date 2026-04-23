@@ -23,6 +23,9 @@ export async function importStravaHistory(
   for (const activity of activities) {
     const { table, record } = mapStravaActivity(activity, userId)
     const stravaId = String(activity.id)
+    console.log(
+      `Strava activity: id=${stravaId} sport_type=${activity.sport_type} type=${activity.type} → ${table}`
+    )
 
     const { data: existing } = await admin
       .from(table)

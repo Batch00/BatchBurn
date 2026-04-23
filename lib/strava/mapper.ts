@@ -13,7 +13,8 @@ export function mapStravaActivity(
   activity: Record<string, unknown>,
   userId: string
 ): { table: 'runs' | 'cross_training'; record: Record<string, unknown> } {
-  const sportType = activity.sport_type as string
+  // Strava returns both sport_type (newer) and type (legacy) — prefer sport_type
+  const sportType = ((activity.sport_type as string) || (activity.type as string) || '').trim()
   const distance = (activity.distance as number) ?? 0
   const movingTime = (activity.moving_time as number) ?? 0
   const date = (activity.start_date_local as string)?.slice(0, 10)

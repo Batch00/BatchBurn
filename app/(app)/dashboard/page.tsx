@@ -74,14 +74,14 @@ export default async function DashboardPage() {
     // Last 20 recent runs for activity feed
     supabase
       .from('runs')
-      .select('id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds')
+      .select('id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds, source')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(20),
     // Last 20 recent cross training for activity feed
     supabase
       .from('cross_training')
-      .select('id, activity_type, date, distance_miles, duration_seconds')
+      .select('id, activity_type, date, distance_miles, duration_seconds, source')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(20),
@@ -154,6 +154,7 @@ export default async function DashboardPage() {
       duration_seconds: r.duration_seconds,
       pace_seconds: r.pace_per_mile_seconds,
       is_run: true,
+      source: r.source,
     })),
     ...(recentCross ?? []).map((c) => ({
       id: c.id,
@@ -163,6 +164,7 @@ export default async function DashboardPage() {
       distance_miles: c.distance_miles,
       duration_seconds: c.duration_seconds,
       is_run: false,
+      source: c.source,
     })),
   ].sort((a, b) => b.date.localeCompare(a.date))
 

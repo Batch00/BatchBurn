@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Zap } from 'lucide-react'
 import { formatPace, formatDuration } from '@/lib/utils/pace'
 
 const typeColors: Record<string, string> = {
@@ -44,6 +45,7 @@ export interface Activity {
   duration_seconds?: number
   pace_seconds?: number
   is_run: boolean
+  source?: string | null
 }
 
 interface ActivityFeedProps {
@@ -92,12 +94,19 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
               key={activity.id}
               className={`flex items-center justify-between rounded-lg border-l-2 bg-white/[0.03] px-3 py-2.5 ${borderColor}`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <span
                   className={`rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
                 >
                   {label}
                 </span>
+                {activity.source === 'strava' && (
+                  <Zap
+                    className="size-3 shrink-0 text-[#FC4C02]"
+                    fill="#FC4C02"
+                    aria-label="Synced from Strava"
+                  />
+                )}
                 <span className="text-sm text-white/50">
                   {formatDate(activity.date)}
                 </span>

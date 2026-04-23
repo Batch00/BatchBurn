@@ -15,14 +15,14 @@ export default async function HistoryPage() {
     supabase
       .from('runs')
       .select(
-        'id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds, notes, shoe_id, shoes(name)',
+        'id, run_type, date, distance_miles, duration_seconds, pace_per_mile_seconds, notes, shoe_id, source, shoes(name)',
       )
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(20),
     supabase
       .from('cross_training')
-      .select('id, activity_type, date, distance_miles, duration_seconds, notes')
+      .select('id, activity_type, date, distance_miles, duration_seconds, notes, source')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(20),
@@ -39,6 +39,7 @@ export default async function HistoryPage() {
     pace_per_mile_seconds: r.pace_per_mile_seconds as number | null,
     notes: r.notes as string | null,
     shoe_id: r.shoe_id as string | null,
+    source: r.source as string | null,
     shoe_name:
       r.shoes && !Array.isArray(r.shoes)
         ? (r.shoes as { name: string }).name
@@ -54,6 +55,7 @@ export default async function HistoryPage() {
     distance_miles: c.distance_miles as number | null,
     duration_seconds: c.duration_seconds as number | null,
     notes: c.notes as string | null,
+    source: c.source as string | null,
   }))
 
   const initialActivities = [...runActivities, ...crossActivities]

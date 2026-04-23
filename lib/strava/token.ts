@@ -13,10 +13,10 @@ export async function getValidToken(userId: string): Promise<string> {
     throw new Error('No Strava tokens found for user')
   }
 
-  const expiresAt = profile.strava_token_expires_at as number
-  const nowPlusFive = Math.floor(Date.now() / 1000) + 300
+  const expiresAtMs = new Date(profile.strava_token_expires_at as string).getTime()
+  const nowPlusFiveMs = Date.now() + 300_000
 
-  if (expiresAt > nowPlusFive) {
+  if (expiresAtMs > nowPlusFiveMs) {
     return profile.strava_access_token as string
   }
 
@@ -38,7 +38,7 @@ export async function getValidToken(userId: string): Promise<string> {
     .update({
       strava_access_token: tokens.access_token,
       strava_refresh_token: tokens.refresh_token,
-      strava_token_expires_at: tokens.expires_at,
+      strava_token_expires_at: new Date(tokens.expires_at * 1000).toISOString(),
     })
     .eq('user_id', userId)
 
@@ -55,7 +55,7 @@ export async function saveStravaTokens(
   }
 ): Promise<void> {
   const admin = createAdminClient()
-  await admin
+  const { error } = await admin
     .from('profiles')
     .upsert(
       {
@@ -63,8 +63,9 @@ export async function saveStravaTokens(
         strava_athlete_id: data.athleteId,
         strava_access_token: data.accessToken,
         strava_refresh_token: data.refreshToken,
-        strava_token_expires_at: data.expiresAt,
+        strava_token_expires_at: new Date(data.expiresAt * 1000).toISOString(),
       },
       { onConflict: 'user_id' }
     )
+  if (error) throw new Error(`saveStravaTokens failed: ${error.message}`)
 }

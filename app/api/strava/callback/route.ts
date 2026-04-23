@@ -41,15 +41,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${appUrl}/login`)
   }
 
-  await saveStravaTokens(user.id, {
-    athleteId: tokenData.athlete.id,
-    accessToken: tokenData.access_token,
-    refreshToken: tokenData.refresh_token,
-    expiresAt: tokenData.expires_at,
-  })
+  try {
+    await saveStravaTokens(user.id, {
+      athleteId: tokenData.athlete.id,
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: tokenData.expires_at,
+    })
+  } catch (err) {
+    console.error('Strava callback — saveStravaTokens failed:', err)
+    return NextResponse.redirect(`${appUrl}/settings?strava=error`)
+  }
 
   // Fire-and-forget — import runs in background, redirect immediately
-  void importStravaHistory(user.id, tokenData.access_token)
+  importStravaHistory(user.id, tokenData.access_token).catch((err) =>
+    console.error('Strava callback — importStravaHistory failed:', err)
+  )
 
   return NextResponse.redirect(`${appUrl}/settings?strava=connected`)
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -17,6 +17,11 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { toast } from '@/lib/hooks/use-toast'
+
+const STRAVA_AUTH_URL =
+  'https://www.strava.com/oauth/authorize?client_id=229161&response_type=code' +
+  '&redirect_uri=https://batchburn.batch-apps.com/api/strava/callback' +
+  '&approval_prompt=force&scope=activity:read_all'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -51,6 +56,8 @@ interface SettingsClientProps {
   email: string
   displayName: string
   isDemoUser?: boolean
+  stravaAthleteId?: number | null
+  stravaStatus?: string | null
 }
 
 export function SettingsClient({
@@ -58,6 +65,8 @@ export function SettingsClient({
   email,
   displayName: initialDisplayName,
   isDemoUser = false,
+  stravaAthleteId = null,
+  stravaStatus = null,
 }: SettingsClientProps) {
   const router = useRouter()
 
@@ -69,11 +78,19 @@ export function SettingsClient({
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  // Strava inline message
-  const [stravaMsg, setStravaMsg] = useState(false)
+  // Strava
+  const [stravaConnected, setStravaConnected] = useState(!!stravaAthleteId)
+  const [stravaId, setStravaId] = useState(stravaAthleteId)
+  const [stravaDisconnecting, setStravaDisconnecting] = useState(false)
 
   // Password reset
   const [pwBusy, setPwBusy] = useState(false)
+
+  useEffect(() => {
+    if (stravaStatus === 'connected') {
+      toast('Strava connected! Importing your activities…')
+    }
+  }, [stravaStatus])
 
   async function saveDisplayName() {
     setNameSaving(true)
@@ -101,6 +118,19 @@ export function SettingsClient({
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  async function disconnectStrava() {
+    setStravaDisconnecting(true)
+    const res = await fetch('/api/strava/disconnect', { method: 'POST' })
+    setStravaDisconnecting(false)
+    if (res.ok) {
+      setStravaConnected(false)
+      setStravaId(null)
+      toast('Strava disconnected')
+    } else {
+      toast('Failed to disconnect Strava', 'error')
+    }
   }
 
   async function deleteAllData() {
@@ -193,18 +223,34 @@ export function SettingsClient({
             <p className="text-sm font-medium text-white">Strava</p>
             <p className="text-xs text-white/40">Sync your activities automatically</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <Button
-              onClick={() => setStravaMsg(true)}
-              variant="outline"
-              className="border-white/10 text-white/70 hover:border-white/20 hover:text-white"
+          {isDemoUser ? (
+            <span className="text-xs text-white/30">Not available in demo</span>
+          ) : stravaConnected ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-medium text-green-400">
+                Connected {stravaId ? `(#${stravaId})` : ''}
+              </span>
+              <Button
+                onClick={disconnectStrava}
+                disabled={stravaDisconnecting}
+                variant="outline"
+                className="border-red-500/30 text-red-400 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+              >
+                {stravaDisconnecting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  'Disconnect'
+                )}
+              </Button>
+            </div>
+          ) : (
+            <a
+              href={STRAVA_AUTH_URL}
+              className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-background px-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white"
             >
               Connect Strava
-            </Button>
-            {stravaMsg && (
-              <p className="text-xs text-white/40">Coming soon</p>
-            )}
-          </div>
+            </a>
+          )}
         </div>
       </Section>
 

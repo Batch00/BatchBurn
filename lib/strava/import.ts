@@ -23,7 +23,7 @@ export async function importStravaHistory(
 
   for (const activity of activities) {
     const { table, record } = mapStravaActivity(activity, userId)
-    const stravaId = String(activity.id)
+    const stravaId = Number(activity.id)
     const date = record.date as string
     const distanceMiles = record.distance_miles as number | undefined
 

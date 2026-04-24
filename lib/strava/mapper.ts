@@ -19,7 +19,7 @@ export function mapStravaActivity(
   const movingTime = (activity.moving_time as number) ?? 0
   const date = (activity.start_date_local as string)?.slice(0, 10)
   const notes = (activity.name as string) ?? ''
-  const stravaActivityId = String(activity.id)
+  const stravaActivityId = Number(activity.id)
 
   const base: Record<string, unknown> = {
     user_id: userId,
@@ -39,7 +39,7 @@ export function mapStravaActivity(
         ...base,
         distance_miles: distanceMiles,
         distance_km: distanceKm,
-        pace_per_mile_seconds: distanceMiles > 0 ? movingTime / distanceMiles : null,
+        pace_per_mile_seconds: distanceMiles > 0 ? Math.round(movingTime / distanceMiles) : null,
         run_type: 'Easy',
       },
     }

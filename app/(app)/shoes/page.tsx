@@ -11,14 +11,23 @@ export default async function ShoesPage() {
   const userId = user!.id
   const isDemoUser = user!.email === 'demo@batchburn.app'
 
-  const { data: shoesData } = await supabase
-    .from('shoes')
-    .select(
-      'id, name, is_active, initial_miles, price_usd, purchase_date, notes, retired_date, runs(distance_miles)',
-    )
-    .eq('user_id', userId)
-    .order('is_active', { ascending: false })
-    .order('name')
+  const [{ data: shoesData }, { data: profileData }] = await Promise.all([
+    supabase
+      .from('shoes')
+      .select(
+        'id, name, is_active, initial_miles, price_usd, purchase_date, notes, retired_date, runs(distance_miles)',
+      )
+      .eq('user_id', userId)
+      .order('is_active', { ascending: false })
+      .order('name'),
+    supabase
+      .from('profiles')
+      .select('primary_shoe_id')
+      .eq('user_id', userId)
+      .single(),
+  ])
+
+  const primaryShoeId = (profileData?.primary_shoe_id as string | null) ?? null
 
   const initialShoes: ShoeRow[] = (shoesData ?? []).map((s) => {
     const runMiles = Array.isArray(s.runs)
@@ -43,7 +52,12 @@ export default async function ShoesPage() {
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">
       <h1 className="mb-6 text-2xl font-bold text-white">Shoes</h1>
-      <ShoesClient initialShoes={initialShoes} userId={userId} isDemoUser={isDemoUser} />
+      <ShoesClient
+        initialShoes={initialShoes}
+        userId={userId}
+        isDemoUser={isDemoUser}
+        initialPrimaryShoeId={primaryShoeId}
+      />
     </div>
   )
 }

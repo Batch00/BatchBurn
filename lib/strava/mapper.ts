@@ -11,7 +11,8 @@ const CROSS_TRAINING_TYPE_MAP: Record<string, string> = {
 
 export function mapStravaActivity(
   activity: Record<string, unknown>,
-  userId: string
+  userId: string,
+  primaryShoeId?: string | null
 ): { table: 'runs' | 'cross_training'; record: Record<string, unknown> } {
   // Strava returns both sport_type (newer) and type (legacy) — prefer sport_type
   const sportType = ((activity.sport_type as string) || (activity.type as string) || '').trim()
@@ -41,6 +42,7 @@ export function mapStravaActivity(
         distance_km: distanceKm,
         pace_per_mile_seconds: distanceMiles > 0 ? Math.round(movingTime / distanceMiles) : null,
         run_type: 'Easy',
+        ...(primaryShoeId ? { shoe_id: primaryShoeId } : {}),
       },
     }
   }

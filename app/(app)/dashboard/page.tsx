@@ -101,16 +101,16 @@ export default async function DashboardPage() {
       .gte('date', toDateStr(twelveWeeksAgo))
       .lte('date', toDateStr(now))
       .order('date', { ascending: true }),
-    // Active shoes
+    // Active shoes — join runs to compute mileage
     supabase
       .from('shoes')
-      .select('id, name, current_miles')
+      .select('id, name, initial_miles, runs(distance_miles)')
       .eq('user_id', userId)
       .eq('is_active', true),
-    // Active goals
+    // Active goals — target_value is the column name in schema
     supabase
       .from('goals')
-      .select('id, period, target_miles, current_miles')
+      .select('id, period, target_value')
       .eq('user_id', userId)
       .eq('is_active', true),
   ])
@@ -219,8 +219,24 @@ export default async function DashboardPage() {
 
       {/* Shoe Health + Goals */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <ShoeHealthWidget shoes={(shoes ?? []) as Shoe[]} />
-        <GoalProgress goals={(goals ?? []) as Goal[]} />
+        <ShoeHealthWidget shoes={(shoes ?? []).map((s) => ({
+          id: s.id as string,
+          name: s.name as string,
+          current_miles:
+            (Array.isArray(s.runs)
+              ? (s.runs as { distance_miles: number | null }[]).reduce(
+                  (sum, r) => sum + (r.distance_miles ?? 0), 0)
+              : 0) + ((s.initial_miles as number | null) ?? 0),
+        }))} />
+        <GoalProgress goals={(goals ?? []).map((g) => ({
+          id: g.id as string,
+          period: g.period as 'week' | 'month' | 'year',
+          target_miles: g.target_value as number,
+          current_miles:
+            g.period === 'week' ? wtdMiles :
+            g.period === 'month' ? mtdMiles :
+            ytdMiles,
+        }))} />
       </div>
     </div>
   )

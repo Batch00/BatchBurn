@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await admin
     .from('profiles')
-    .select('user_id')
+    .select('user_id, primary_shoe_id')
     .eq('strava_athlete_id', owner_id)
     .maybeSingle()
 
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = profile.user_id as string
+  const primaryShoeId = (profile.primary_shoe_id as string | null) ?? null
 
   try {
     const accessToken = await getValidToken(userId)
@@ -54,12 +55,13 @@ export async function POST(request: NextRequest) {
     }
 
     const activity = await activityResponse.json()
-    const { table, record } = mapStravaActivity(activity, userId)
+    const { table, record } = mapStravaActivity(activity, userId, primaryShoeId)
+    const stravaId = Number(object_id)
 
     const { data: existing } = await admin
       .from(table)
       .select('id')
-      .eq('strava_activity_id', String(object_id))
+      .eq('strava_activity_id', stravaId)
       .eq('user_id', userId)
       .maybeSingle()
 

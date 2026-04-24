@@ -17,6 +17,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { toast } from '@/lib/hooks/use-toast'
+import { revalidateAll } from '@/lib/actions'
 
 const STRAVA_AUTH_URL =
   'https://www.strava.com/oauth/authorize?client_id=229161&response_type=code' +
@@ -96,6 +97,8 @@ export function SettingsClient({
       const data = await res.json()
       setImportCount((data.imported ?? 0) + (data.synced ?? 0))
       setImportStatus('success')
+      router.refresh()
+      await revalidateAll()
     } catch {
       console.error('Strava import failed')
       setImportStatus('error')

@@ -88,13 +88,28 @@ function ShoeCard({
   userId,
   onRefresh,
   isDemoUser = false,
+  isPrimary = false,
+  onSetPrimary,
 }: {
   shoe: ShoeRow
   userId: string
   onRefresh: () => void
   isDemoUser?: boolean
+  isPrimary?: boolean
+  onSetPrimary?: () => void
 }) {
   const [busy, setBusy] = useState(false)
+  const [primaryBusy, setPrimaryBusy] = useState(false)
+
+  async function setPrimary() {
+    setPrimaryBusy(true)
+    const supabase = createClient()
+    await supabase
+      .from('profiles')
+      .upsert({ user_id: userId, primary_shoe_id: shoe.id }, { onConflict: 'user_id' })
+    setPrimaryBusy(false)
+    onSetPrimary?.()
+  }
 
   const miles = shoe.computed_miles
   const pct = Math.min((miles / MAX_MILES) * 100, 100)
@@ -131,10 +146,15 @@ function ShoeCard({
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-base font-semibold text-white">
               {shoe.name}
             </h3>
+            {isPrimary && (
+              <span className="shrink-0 rounded-md bg-[#C41230]/20 px-2 py-0.5 text-xs font-medium text-[#C41230]">
+                Primary
+              </span>
+            )}
             {!shoe.is_active && (
               <span className="shrink-0 rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/40">
                 Retired
@@ -149,21 +169,34 @@ function ShoeCard({
         </div>
 
         {!isDemoUser && (
-          <Button
-            onClick={toggleRetired}
-            disabled={busy}
-            size="sm"
-            variant="outline"
-            className="shrink-0 border-white/10 text-white/60 hover:border-white/20 hover:text-white/80"
-          >
-            {busy ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : shoe.is_active ? (
-              'Retire'
-            ) : (
-              'Reactivate'
+          <div className="flex shrink-0 flex-col gap-1.5">
+            <Button
+              onClick={toggleRetired}
+              disabled={busy}
+              size="sm"
+              variant="outline"
+              className="border-white/10 text-white/60 hover:border-white/20 hover:text-white/80"
+            >
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : shoe.is_active ? (
+                'Retire'
+              ) : (
+                'Reactivate'
+              )}
+            </Button>
+            {shoe.is_active && !isPrimary && (
+              <Button
+                onClick={setPrimary}
+                disabled={primaryBusy}
+                size="sm"
+                variant="outline"
+                className="border-white/10 text-white/60 hover:border-white/20 hover:text-white/80"
+              >
+                {primaryBusy ? <Loader2 className="size-3.5 animate-spin" /> : 'Set Primary'}
+              </Button>
             )}
-          </Button>
+          </div>
         )}
       </div>
 
@@ -362,10 +395,17 @@ interface ShoesClientProps {
   initialShoes: ShoeRow[]
   userId: string
   isDemoUser?: boolean
+  initialPrimaryShoeId?: string | null
 }
 
-export function ShoesClient({ initialShoes, userId, isDemoUser = false }: ShoesClientProps) {
+export function ShoesClient({
+  initialShoes,
+  userId,
+  isDemoUser = false,
+  initialPrimaryShoeId = null,
+}: ShoesClientProps) {
   const [shoes, setShoes] = useState<ShoeRow[]>(initialShoes)
+  const [primaryShoeId, setPrimaryShoeId] = useState<string | null>(initialPrimaryShoeId ?? null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -449,6 +489,8 @@ export function ShoesClient({ initialShoes, userId, isDemoUser = false }: ShoesC
                 userId={userId}
                 onRefresh={fetchShoes}
                 isDemoUser={isDemoUser}
+                isPrimary={primaryShoeId === shoe.id}
+                onSetPrimary={() => setPrimaryShoeId(shoe.id)}
               />
             ))}
           </div>
@@ -467,6 +509,7 @@ export function ShoesClient({ initialShoes, userId, isDemoUser = false }: ShoesC
                 userId={userId}
                 onRefresh={fetchShoes}
                 isDemoUser={isDemoUser}
+                isPrimary={false}
               />
             ))}
           </div>

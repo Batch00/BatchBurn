@@ -17,12 +17,20 @@ export async function importStravaHistory(
 
   const activities = (await response.json()) as Record<string, unknown>[]
   const admin = createAdminClient()
+
+  const { data: profileData } = await admin
+    .from('profiles')
+    .select('primary_shoe_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  const primaryShoeId = (profileData?.primary_shoe_id as string | null) ?? null
+
   let imported = 0
   let skipped = 0
   let synced = 0
 
   for (const activity of activities) {
-    const { table, record } = mapStravaActivity(activity, userId)
+    const { table, record } = mapStravaActivity(activity, userId, primaryShoeId)
     const stravaId = Number(activity.id)
     const date = record.date as string
     const distanceMiles = record.distance_miles as number | undefined

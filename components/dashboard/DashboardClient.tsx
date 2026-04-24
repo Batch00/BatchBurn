@@ -4,20 +4,11 @@ import { useState, useMemo } from 'react'
 import { WeeklyMileageChart } from './WeeklyMileageChart'
 import { ActivityFeed, type Activity } from './ActivityFeed'
 
-const FILTER_CHIPS = [
-  'All',
-  'Easy',
-  'Tempo',
-  'Long',
-  'Fartlek',
-  'Hill',
-  'Interval',
-  'Bike',
-  'Walk',
-  'Stair Master',
+// Ordered master list — chips only appear if the user has data for that type
+const ORDERED_CHIP_TYPES = [
+  'Easy', 'Tempo', 'Long', 'Fartlek', 'Hill', 'Interval',
+  'Bike', 'Walk', 'Stair Master', 'Swim', 'Strength', 'Yoga', 'Other',
 ] as const
-
-type FilterChip = (typeof FILTER_CHIPS)[number]
 
 const RUN_TYPE_SET = new Set(['Easy', 'Tempo', 'Long', 'Fartlek', 'Hill', 'Interval'])
 
@@ -52,8 +43,19 @@ export function DashboardClient({
   weekBuckets,
   allActivities,
 }: DashboardClientProps) {
-  const [filter, setFilter] = useState<FilterChip>('All')
+  const [filter, setFilter] = useState<string>('All')
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
+
+  const availableChips = useMemo(() => {
+    const present = new Set<string>()
+    weeklyRuns.forEach((r) => { if (r.run_type) present.add(r.run_type) })
+    weeklyCross.forEach((c) => { if (c.activity_type) present.add(c.activity_type) })
+    allActivities.forEach((a) => {
+      if (a.is_run && a.type) present.add(a.type)
+      else if (!a.is_run && a.activity_type) present.add(a.activity_type)
+    })
+    return ['All', ...ORDERED_CHIP_TYPES.filter((c) => present.has(c))]
+  }, [weeklyRuns, weeklyCross, allActivities])
 
   const chartData = useMemo(() => {
     return weekBuckets.map(({ label, start, end }) => {
@@ -113,8 +115,8 @@ export function DashboardClient({
   return (
     <>
       {/* Filter chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {FILTER_CHIPS.map((chip) => (
+      <div className="flex flex-wrap gap-2">
+        {availableChips.map((chip) => (
           <button
             key={chip}
             type="button"
@@ -122,7 +124,7 @@ export function DashboardClient({
               setFilter(chip)
               setSelectedWeekStart(null)
             }}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
               filter === chip
                 ? 'bg-[#C41230] text-white'
                 : 'border border-white/10 bg-white/5 text-white/50 hover:text-white/80'

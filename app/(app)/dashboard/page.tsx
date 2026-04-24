@@ -190,22 +190,25 @@ export default async function DashboardPage() {
           label="WTD Miles"
           value={wtdMiles.toFixed(1)}
           unit="miles"
+          sublabel="runs only"
         />
         <KpiCard
           label="MTD Miles"
           value={mtdMiles.toFixed(1)}
           unit="miles"
+          sublabel="runs only"
         />
         <KpiCard
           label="YTD Miles"
           value={ytdMiles.toFixed(1)}
           unit="miles"
+          sublabel="runs only"
         />
         <KpiCard
           label="Avg Pace"
           value={avgPace > 0 ? formatPace(avgPace) : '--:--'}
           unit="min/mi"
-          sublabel="This week"
+          sublabel="This week · runs only"
         />
       </div>
 
@@ -227,7 +230,7 @@ export default async function DashboardPage() {
               ? (s.runs as { distance_miles: number | null }[]).reduce(
                   (sum, r) => sum + (r.distance_miles ?? 0), 0)
               : 0) + ((s.initial_miles as number | null) ?? 0),
-        }))} />
+        })).sort((a, b) => b.current_miles - a.current_miles)} />
         <GoalProgress goals={(goals ?? []).map((g) => ({
           id: g.id as string,
           period: g.period as 'week' | 'month' | 'year',

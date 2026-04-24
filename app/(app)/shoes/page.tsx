@@ -47,7 +47,7 @@ export default async function ShoesPage() {
       retired_date: s.retired_date as string | null,
       computed_miles: runMiles + ((s.initial_miles as number | null) ?? 0),
     }
-  })
+  }).sort((a, b) => b.computed_miles - a.computed_miles)
 
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">

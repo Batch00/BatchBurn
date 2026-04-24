@@ -94,7 +94,7 @@ export function SettingsClient({
       const res = await fetch('/api/strava/import', { method: 'POST' })
       if (!res.ok) throw new Error('non-ok response')
       const data = await res.json()
-      setImportCount(data.imported ?? 0)
+      setImportCount((data.imported ?? 0) + (data.synced ?? 0))
       setImportStatus('success')
     } catch {
       console.error('Strava import failed')

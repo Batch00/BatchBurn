@@ -198,7 +198,7 @@ function EditRaceModal({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="edit-race-date" className="text-sm text-white/60">
                 Date
@@ -270,7 +270,7 @@ function EditRaceModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="edit-race-overall-place" className="text-sm text-white/60">
                 Overall Place <span className="text-white/30">(optional)</span>
@@ -297,7 +297,7 @@ function EditRaceModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="edit-race-ag-place" className="text-sm text-white/60">
                 Age Group Place <span className="text-white/30">(optional)</span>
@@ -942,7 +942,7 @@ export function RacesClient({ initialRaces, shoes, userId, isDemoUser = false }:
             <Plus className="size-4" />
             Add Race
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add Race</DialogTitle>
             </DialogHeader>

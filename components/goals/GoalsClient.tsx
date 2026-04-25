@@ -127,8 +127,8 @@ function EditGoalModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-[#161B22] p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4">
+      <div className="my-auto w-full max-w-sm rounded-xl border border-white/10 bg-[#161B22] p-6 shadow-xl">
         <h2 className="mb-4 text-lg font-semibold text-white">Edit Goal</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1">
@@ -581,7 +581,7 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
             <Plus className="size-4" />
             Add Goal
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Add Goal</DialogTitle>
             </DialogHeader>

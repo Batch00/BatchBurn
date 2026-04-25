@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, Plus, ChevronDown, ChevronUp, MoreHorizontal } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,10 +33,15 @@ export type GoalRow = {
 }
 
 // ---------------------------------------------------------------------------
-// Schema
+// Schemas
 // ---------------------------------------------------------------------------
 
 const goalSchema = z.object({
+  period: z.enum(['week', 'month', 'year']),
+  target_miles: z.coerce.number().min(0.1, 'Target miles is required'),
+})
+
+const goalEditSchema = z.object({
   period: z.enum(['week', 'month', 'year']),
   target_miles: z.coerce.number().min(0.1, 'Target miles is required'),
 })
@@ -80,6 +86,115 @@ function getBarColor(pct: number): string {
 }
 
 // ---------------------------------------------------------------------------
+// Edit Goal Modal
+// ---------------------------------------------------------------------------
+
+function EditGoalModal({
+  goal,
+  onClose,
+  onSaved,
+}: {
+  goal: GoalRow
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(goalEditSchema),
+    defaultValues: {
+      period: goal.period,
+      target_miles: goal.target_value,
+    },
+  })
+
+  async function onSubmit(data: z.infer<typeof goalEditSchema>) {
+    setSubmitError(null)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('goals')
+      .update({ period: data.period, target_value: data.target_miles })
+      .eq('id', goal.id)
+    if (error) {
+      setSubmitError(error.message)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-[#161B22] p-6 shadow-xl">
+        <h2 className="mb-4 text-lg font-semibold text-white">Edit Goal</h2>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1">
+            <Label className="text-sm text-white/60">Goal Type</Label>
+            <div className="flex h-8 items-center rounded-lg border border-white/10 bg-white/5 px-2.5 text-sm text-white/40">
+              Mileage
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="edit-goal-period" className="text-sm text-white/60">
+              Period
+            </Label>
+            <Select id="edit-goal-period" {...register('period')}>
+              <option value="week">Week</option>
+              <option value="month">Month</option>
+              <option value="year">Year</option>
+            </Select>
+            {errors.period && (
+              <p className="text-xs text-red-400">{errors.period.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="edit-goal-miles" className="text-sm text-white/60">
+              Target Miles
+            </Label>
+            <Input
+              id="edit-goal-miles"
+              type="number"
+              step="0.1"
+              min="0.1"
+              className={inputCls}
+              {...register('target_miles')}
+            />
+            {errors.target_miles && (
+              <p className="text-xs text-red-400">{errors.target_miles.message}</p>
+            )}
+          </div>
+
+          {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="flex-1 border-white/10 text-white/60 hover:border-white/20 hover:text-white/80"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 bg-[#C41230] font-semibold text-white hover:bg-[#A10F29] disabled:opacity-50"
+            >
+              {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Add Goal Form
 // ---------------------------------------------------------------------------
 
@@ -110,14 +225,11 @@ function AddGoalForm({
   async function onSubmit(data: z.infer<typeof goalSchema>) {
     setSubmitError(null)
 
-    // Client-side duplicate check
     const existing = activeGoals.find(
       (g) => g.is_active && g.period === data.period,
     )
     if (existing) {
-      setSubmitError(
-        `You already have an active ${data.period} goal`,
-      )
+      setSubmitError(`You already have an active ${data.period} goal`)
       return
     }
 
@@ -208,47 +320,170 @@ function AddGoalForm({
 function GoalCard({
   goal,
   progress,
+  isDemoUser,
+  onRefresh,
 }: {
   goal: GoalRow
   progress: number | null
+  isDemoUser: boolean
+  onRefresh: () => void
 }) {
+  const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuOpen])
+
+  async function handleDeactivate() {
+    setMenuOpen(false)
+    const supabase = createClient()
+    await supabase.from('goals').update({ is_active: false }).eq('id', goal.id)
+    router.refresh()
+    onRefresh()
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    const supabase = createClient()
+    await supabase.from('goals').delete().eq('id', goal.id)
+    setDeleting(false)
+    setConfirmDelete(false)
+    router.refresh()
+    onRefresh()
+  }
+
   const current = progress ?? 0
   const pct = Math.min((current / goal.target_value) * 100, 100)
   const barColor = getBarColor(pct)
   const periodLabel = getPeriodLabel(goal.period)
 
+  if (confirmDelete) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <p className="mb-1 text-sm font-medium text-white">Delete this goal?</p>
+        <p className="mb-4 text-xs text-white/50">This cannot be undone.</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(false)}
+            className="flex-1 rounded-md border border-white/10 py-1.5 text-sm text-white/60 hover:bg-white/5"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex-1 rounded-md bg-red-600/80 py-1.5 text-sm text-white hover:bg-red-600 disabled:opacity-50"
+          >
+            {deleting ? <Loader2 className="mx-auto size-4 animate-spin" /> : 'Delete'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-md bg-[#C41230]/20 px-2 py-0.5 text-xs font-semibold tracking-wider text-[#C41230]">
-          {periodLabel}
-        </span>
-        <span className="text-sm text-white/40">
-          {goal.target_value} miles / {goal.period}
-        </span>
-      </div>
-
-      <div className="mb-2 flex items-baseline justify-between">
-        <span className="text-2xl font-bold text-white">
-          {current.toFixed(1)}
-          <span className="ml-1 text-sm font-normal text-white/40">mi</span>
-        </span>
-        <span className="text-sm font-semibold text-white">
-          {pct.toFixed(0)}%
-        </span>
-      </div>
-
-      <div className="mb-1 h-1.5 w-full overflow-hidden rounded-full bg-[#1c2128]">
-        <div
-          className={`h-full rounded-full transition-all ${barColor}`}
-          style={{ width: `${pct}%` }}
+    <>
+      {editOpen && (
+        <EditGoalModal
+          goal={goal}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => {
+            setEditOpen(false)
+            router.refresh()
+            onRefresh()
+          }}
         />
-      </div>
+      )}
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="rounded-md bg-[#C41230]/20 px-2 py-0.5 text-xs font-semibold tracking-wider text-[#C41230]">
+            {periodLabel}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-white/40">
+              {goal.target_value} miles / {goal.period}
+            </span>
+            {!isDemoUser && goal.is_active && (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="flex size-7 items-center justify-center rounded-md text-white/30 hover:bg-white/10 hover:text-white/60"
+                >
+                  <MoreHorizontal className="size-4" />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-8 z-10 min-w-[140px] rounded-lg border border-white/10 bg-[#161B22] py-1 shadow-xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        setEditOpen(true)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-white/70 hover:bg-white/5 hover:text-white"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeactivate}
+                      className="w-full px-4 py-2 text-left text-sm text-white/70 hover:bg-white/5 hover:text-white"
+                    >
+                      Mark Complete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        setConfirmDelete(true)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/5"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
 
-      <p className="text-xs text-white/30">
-        {current.toFixed(1)} / {goal.target_value} mi
-      </p>
-    </div>
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-2xl font-bold text-white">
+            {current.toFixed(1)}
+            <span className="ml-1 text-sm font-normal text-white/40">mi</span>
+          </span>
+          <span className="text-sm font-semibold text-white">
+            {pct.toFixed(0)}%
+          </span>
+        </div>
+
+        <div className="mb-1 h-1.5 w-full overflow-hidden rounded-full bg-[#1c2128]">
+          <div
+            className={`h-full rounded-full transition-all ${barColor}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+
+        <p className="text-xs text-white/30">
+          {current.toFixed(1)} / {goal.target_value} mi
+        </p>
+      </div>
+    </>
   )
 }
 
@@ -272,7 +507,6 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
   const activeGoals = goals.filter((g) => g.is_active)
   const pastGoals = goals.filter((g) => !g.is_active)
 
-  // Fetch progress for active goals
   useEffect(() => {
     if (activeGoals.length === 0) return
     fetchProgress(activeGoals)
@@ -373,6 +607,8 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
                 key={goal.id}
                 goal={goal}
                 progress={progress[goal.id] ?? null}
+                isDemoUser={isDemoUser}
+                onRefresh={fetchGoals}
               />
             ))}
           </div>
@@ -403,7 +639,13 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
           {pastOpen && (
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 opacity-60">
               {pastGoals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} progress={null} />
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  progress={null}
+                  isDemoUser={isDemoUser}
+                  onRefresh={fetchGoals}
+                />
               ))}
             </div>
           )}

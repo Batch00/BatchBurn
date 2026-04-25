@@ -30,12 +30,10 @@ export default async function ShoesPage() {
   const primaryShoeId = (profileData?.primary_shoe_id as string | null) ?? null
 
   const initialShoes: ShoeRow[] = (shoesData ?? []).map((s) => {
-    const runMiles = Array.isArray(s.runs)
-      ? (s.runs as { distance_miles: number | null }[]).reduce(
-          (sum, r) => sum + (r.distance_miles ?? 0),
-          0,
-        )
-      : 0
+    const runs = Array.isArray(s.runs)
+      ? (s.runs as { distance_miles: number | null }[])
+      : []
+    const runMiles = runs.reduce((sum, r) => sum + (r.distance_miles ?? 0), 0)
     return {
       id: s.id as string,
       name: s.name as string,
@@ -46,6 +44,7 @@ export default async function ShoesPage() {
       notes: s.notes as string | null,
       retired_date: s.retired_date as string | null,
       computed_miles: runMiles + ((s.initial_miles as number | null) ?? 0),
+      run_count: runs.length,
     }
   }).sort((a, b) => b.computed_miles - a.computed_miles)
 

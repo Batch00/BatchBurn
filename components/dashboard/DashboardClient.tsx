@@ -4,13 +4,8 @@ import { useState, useMemo } from 'react'
 import { WeeklyMileageChart } from './WeeklyMileageChart'
 import { ActivityFeed, type Activity } from './ActivityFeed'
 
-// Ordered master list — chips only appear if the user has data for that type
-const ORDERED_CHIP_TYPES = [
-  'Easy', 'Tempo', 'Long', 'Fartlek', 'Hill', 'Interval',
-  'Bike', 'Walk', 'Stair Master', 'Swim', 'Strength', 'Yoga', 'Other',
-] as const
-
-const RUN_TYPE_SET = new Set(['Easy', 'Tempo', 'Long', 'Fartlek', 'Hill', 'Interval'])
+type FilterMode = 'All' | 'Runs' | 'Cross Training'
+const CHIPS: FilterMode[] = ['All', 'Runs', 'Cross Training']
 
 export interface WeekBucket {
   label: string
@@ -43,19 +38,8 @@ export function DashboardClient({
   weekBuckets,
   allActivities,
 }: DashboardClientProps) {
-  const [filter, setFilter] = useState<string>('All')
+  const [filter, setFilter] = useState<FilterMode>('All')
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
-
-  const availableChips = useMemo(() => {
-    const present = new Set<string>()
-    weeklyRuns.forEach((r) => { if (r.run_type) present.add(r.run_type) })
-    weeklyCross.forEach((c) => { if (c.activity_type) present.add(c.activity_type) })
-    allActivities.forEach((a) => {
-      if (a.is_run && a.type) present.add(a.type)
-      else if (!a.is_run && a.activity_type) present.add(a.activity_type)
-    })
-    return ['All', ...ORDERED_CHIP_TYPES.filter((c) => present.has(c))]
-  }, [weeklyRuns, weeklyCross, allActivities])
 
   const chartData = useMemo(() => {
     return weekBuckets.map(({ label, start, end }) => {
@@ -68,13 +52,13 @@ export function DashboardClient({
           weeklyCross
             .filter((c) => c.date >= start && c.date <= end)
             .reduce((s, c) => s + (c.distance_miles ?? 0), 0)
-      } else if (RUN_TYPE_SET.has(filter)) {
+      } else if (filter === 'Runs') {
         miles = weeklyRuns
-          .filter((r) => r.date >= start && r.date <= end && r.run_type === filter)
+          .filter((r) => r.date >= start && r.date <= end)
           .reduce((s, r) => s + (r.distance_miles ?? 0), 0)
       } else {
         miles = weeklyCross
-          .filter((c) => c.date >= start && c.date <= end && c.activity_type === filter)
+          .filter((c) => c.date >= start && c.date <= end)
           .reduce((s, c) => s + (c.distance_miles ?? 0), 0)
       }
       return { week: label, weekStart: start, miles: parseFloat(miles.toFixed(2)) }
@@ -91,12 +75,8 @@ export function DashboardClient({
       result = result.filter((a) => a.date >= selectedWeekStart && a.date <= endStr)
     }
 
-    if (filter !== 'All') {
-      result = result.filter((a) => {
-        if (a.is_run) return a.type === filter
-        return a.activity_type === filter
-      })
-    }
+    if (filter === 'Runs') result = result.filter((a) => a.is_run)
+    else if (filter === 'Cross Training') result = result.filter((a) => !a.is_run)
 
     return result.slice(0, 5)
   }, [allActivities, selectedWeekStart, filter])
@@ -116,7 +96,7 @@ export function DashboardClient({
     <>
       {/* Filter chips */}
       <div className="flex flex-wrap gap-2">
-        {availableChips.map((chip) => (
+        {CHIPS.map((chip) => (
           <button
             key={chip}
             type="button"

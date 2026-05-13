@@ -7,6 +7,14 @@ const CROSS_TRAINING_TYPE_MAP: Record<string, string> = {
   WeightTraining: 'Strength',
   Swim: 'Swim',
   Yoga: 'Yoga',
+  Hike: 'Hiking',
+  Soccer: 'Soccer',
+  Tennis: 'Tennis',
+  Pickleball: 'Pickleball',
+  Basketball: 'Basketball',
+  Elliptical: 'Elliptical',
+  Rowing: 'Rowing',
+  RockClimbing: 'Climbing',
 }
 
 export function mapStravaActivity(

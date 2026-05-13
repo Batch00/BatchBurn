@@ -273,10 +273,17 @@ const CROSS_TYPES = [
   'Swim',
   'Strength',
   'Yoga',
+  'Soccer',
+  'Tennis',
+  'Pickleball',
+  'Basketball',
+  'Hiking',
+  'Treadmill',
+  'Elliptical',
+  'Rowing',
+  'Climbing',
   'Other',
 ] as const
-
-const SHOW_DISTANCE_TYPES = new Set(['Bike', 'Walk', 'Swim'])
 
 const crossSchema = z
   .object({
@@ -300,7 +307,6 @@ function CrossTrainingForm({ userId }: { userId: string }) {
   const {
     register,
     handleSubmit,
-    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm({
@@ -312,22 +318,21 @@ function CrossTrainingForm({ userId }: { userId: string }) {
     },
   })
 
-  const activityType = watch('activity_type') as string
-  const showDistance = SHOW_DISTANCE_TYPES.has(activityType)
-  const showSteps = activityType === 'Stair Master'
-
   async function onSubmit(data: z.infer<typeof crossSchema>) {
     setSubmitError(null)
     const supabase = createClient()
     const durationSeconds = data.hours * 3600 + data.minutes * 60 + data.seconds
+    const distanceMiles = data.distance_miles && data.distance_miles > 0 ? data.distance_miles : null
+    const distanceKm = distanceMiles ? distanceMiles * 1.60934 : null
 
     const { error } = await supabase.from('cross_training').insert({
       user_id: userId,
       date: data.date,
       activity_type: data.activity_type,
       duration_seconds: durationSeconds,
-      distance_miles: showDistance ? (data.distance_miles || null) : null,
-      steps: showSteps ? (data.steps || null) : null,
+      distance_miles: distanceMiles,
+      distance_km: distanceKm,
+      steps: data.steps && data.steps > 0 ? data.steps : null,
       notes: data.notes || null,
       source: 'manual',
     })
@@ -402,46 +407,42 @@ function CrossTrainingForm({ userId }: { userId: string }) {
         )}
       </div>
 
-      {/* Distance (Bike, Walk, Swim only) */}
-      {showDistance && (
-        <div className="space-y-1">
-          <Label htmlFor="cross-distance" className="text-sm text-white/60">
-            Distance (miles) <span className="text-white/30">(optional)</span>
-          </Label>
-          <Input
-            id="cross-distance"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            className={inputCls}
-            {...register('distance_miles')}
-          />
-          {errors.distance_miles && (
-            <p className="text-xs text-red-400">{errors.distance_miles.message}</p>
-          )}
-        </div>
-      )}
+      {/* Distance */}
+      <div className="space-y-1">
+        <Label htmlFor="cross-distance" className="text-sm text-white/60">
+          Distance (miles) <span className="text-white/30">(optional)</span>
+        </Label>
+        <Input
+          id="cross-distance"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="0.00"
+          className={inputCls}
+          {...register('distance_miles')}
+        />
+        {errors.distance_miles && (
+          <p className="text-xs text-red-400">{errors.distance_miles.message}</p>
+        )}
+      </div>
 
-      {/* Steps (Stair Master only) */}
-      {showSteps && (
-        <div className="space-y-1">
-          <Label htmlFor="cross-steps" className="text-sm text-white/60">
-            Steps <span className="text-white/30">(optional)</span>
-          </Label>
-          <Input
-            id="cross-steps"
-            type="number"
-            min="0"
-            placeholder="0"
-            className={inputCls}
-            {...register('steps')}
-          />
-          {errors.steps && (
-            <p className="text-xs text-red-400">{errors.steps.message}</p>
-          )}
-        </div>
-      )}
+      {/* Steps */}
+      <div className="space-y-1">
+        <Label htmlFor="cross-steps" className="text-sm text-white/60">
+          Steps <span className="text-white/30">(optional)</span>
+        </Label>
+        <Input
+          id="cross-steps"
+          type="number"
+          min="0"
+          placeholder="0"
+          className={inputCls}
+          {...register('steps')}
+        />
+        {errors.steps && (
+          <p className="text-xs text-red-400">{errors.steps.message}</p>
+        )}
+      </div>
 
       {/* Notes */}
       <div className="space-y-1">

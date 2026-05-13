@@ -16,6 +16,15 @@ const typeColors: Record<string, string> = {
   Swim: 'border-l-cyan-500',
   Strength: 'border-l-purple-500',
   Yoga: 'border-l-pink-500',
+  Soccer: 'border-l-green-600',
+  Tennis: 'border-l-yellow-500',
+  Pickleball: 'border-l-orange-500',
+  Basketball: 'border-l-red-500',
+  Hiking: 'border-l-green-600',
+  Treadmill: 'border-l-blue-500',
+  Elliptical: 'border-l-purple-600',
+  Rowing: 'border-l-cyan-500',
+  Climbing: 'border-l-pink-500',
   Other: 'border-l-gray-500',
 }
 
@@ -33,6 +42,15 @@ const typeBadgeColors: Record<string, string> = {
   Swim: 'bg-cyan-500/15 text-cyan-400',
   Strength: 'bg-purple-500/15 text-purple-400',
   Yoga: 'bg-pink-500/15 text-pink-400',
+  Soccer: 'bg-green-600/15 text-green-500',
+  Tennis: 'bg-yellow-500/15 text-yellow-400',
+  Pickleball: 'bg-orange-500/15 text-orange-400',
+  Basketball: 'bg-red-500/15 text-red-400',
+  Hiking: 'bg-green-600/15 text-green-500',
+  Treadmill: 'bg-blue-500/15 text-blue-400',
+  Elliptical: 'bg-purple-600/15 text-purple-400',
+  Rowing: 'bg-cyan-500/15 text-cyan-400',
+  Climbing: 'bg-pink-500/15 text-pink-400',
   Other: 'bg-gray-500/15 text-gray-400',
 }
 

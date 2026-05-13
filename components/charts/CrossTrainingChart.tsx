@@ -15,6 +15,19 @@ const CROSS_TYPE_COLORS: Record<string, string> = {
   Bike: '#3B82F6',
   Walk: '#16A34A',
   'Stair Master': '#F97316',
+  Swim: '#06B6D4',
+  Strength: '#9333EA',
+  Yoga: '#EC4899',
+  Soccer: '#16A34A',
+  Tennis: '#EAB308',
+  Pickleball: '#F97316',
+  Basketball: '#EF4444',
+  Hiking: '#16A34A',
+  Treadmill: '#3B82F6',
+  Elliptical: '#9333EA',
+  Rowing: '#06B6D4',
+  Climbing: '#EC4899',
+  Other: '#6B7280',
 }
 
 function getColor(type: string): string {

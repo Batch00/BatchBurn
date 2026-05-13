@@ -22,7 +22,7 @@ export default async function HistoryPage() {
       .limit(20),
     supabase
       .from('cross_training')
-      .select('id, activity_type, date, distance_miles, duration_seconds, notes, source')
+      .select('id, activity_type, date, distance_miles, duration_seconds, steps, notes, source')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(20),
@@ -54,6 +54,7 @@ export default async function HistoryPage() {
     date: c.date as string,
     distance_miles: c.distance_miles as number | null,
     duration_seconds: c.duration_seconds as number | null,
+    steps: c.steps as number | null,
     notes: c.notes as string | null,
     source: c.source as string | null,
   }))

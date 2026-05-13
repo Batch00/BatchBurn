@@ -36,6 +36,7 @@ export type UnifiedActivity = {
   activity_type?: string | null
   run_type?: string | null
   source?: string | null
+  steps?: number | null
 }
 
 // ---------------------------------------------------------------------------
@@ -58,6 +59,15 @@ const BORDER_COLORS: Record<string, string> = {
   Swim: 'border-l-cyan-500',
   Strength: 'border-l-purple-500',
   Yoga: 'border-l-pink-500',
+  Soccer: 'border-l-green-600',
+  Tennis: 'border-l-yellow-500',
+  Pickleball: 'border-l-orange-500',
+  Basketball: 'border-l-red-500',
+  Hiking: 'border-l-green-600',
+  Treadmill: 'border-l-blue-500',
+  Elliptical: 'border-l-purple-600',
+  Rowing: 'border-l-cyan-500',
+  Climbing: 'border-l-pink-500',
   Other: 'border-l-gray-500',
 }
 
@@ -75,12 +85,37 @@ const BADGE_COLORS: Record<string, string> = {
   Swim: 'bg-cyan-500/15 text-cyan-400',
   Strength: 'bg-purple-500/15 text-purple-400',
   Yoga: 'bg-pink-500/15 text-pink-400',
+  Soccer: 'bg-green-600/15 text-green-500',
+  Tennis: 'bg-yellow-500/15 text-yellow-400',
+  Pickleball: 'bg-orange-500/15 text-orange-400',
+  Basketball: 'bg-red-500/15 text-red-400',
+  Hiking: 'bg-green-600/15 text-green-500',
+  Treadmill: 'bg-blue-500/15 text-blue-400',
+  Elliptical: 'bg-purple-600/15 text-purple-400',
+  Rowing: 'bg-cyan-500/15 text-cyan-400',
+  Climbing: 'bg-pink-500/15 text-pink-400',
   Other: 'bg-gray-500/15 text-gray-400',
 }
 
 const RUN_TYPES = ['Easy', 'Tempo', 'Long', 'Fartlek', 'Hill', 'Interval'] as const
-const CROSS_TYPES = ['Bike', 'Walk', 'Stair Master', 'Swim', 'Strength', 'Yoga', 'Other'] as const
-const SHOW_DISTANCE_CROSS = new Set(['Bike', 'Walk', 'Swim'])
+const CROSS_TYPES = [
+  'Bike',
+  'Walk',
+  'Stair Master',
+  'Swim',
+  'Strength',
+  'Yoga',
+  'Soccer',
+  'Tennis',
+  'Pickleball',
+  'Basketball',
+  'Hiking',
+  'Treadmill',
+  'Elliptical',
+  'Rowing',
+  'Climbing',
+  'Other',
+] as const
 
 const inputCls =
   'border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#C41230] focus-visible:ring-[#C41230]/20'
@@ -113,6 +148,7 @@ const editCrossSchema = z
     minutes: z.coerce.number().min(0).max(59),
     seconds: z.coerce.number().min(0).max(59),
     distance_miles: z.coerce.number().min(0).optional(),
+    steps: z.coerce.number().min(0).optional(),
     notes: z.string().optional(),
   })
   .refine((data) => data.hours + data.minutes + data.seconds > 0, {
@@ -331,7 +367,6 @@ function EditCrossModal({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(editCrossSchema),
@@ -342,17 +377,17 @@ function EditCrossModal({
       minutes: hms.minutes,
       seconds: hms.seconds,
       distance_miles: activity.distance_miles ?? 0,
+      steps: activity.steps ?? 0,
       notes: activity.notes ?? '',
     },
   })
-
-  const activityType = watch('activity_type') as string
-  const showDistance = SHOW_DISTANCE_CROSS.has(activityType)
 
   async function onSubmit(data: z.infer<typeof editCrossSchema>) {
     setSubmitError(null)
     const supabase = createClient()
     const durationSeconds = data.hours * 3600 + data.minutes * 60 + data.seconds
+    const distanceMiles = data.distance_miles && data.distance_miles > 0 ? data.distance_miles : null
+    const distanceKm = distanceMiles ? distanceMiles * 1.60934 : null
 
     const { error } = await supabase
       .from('cross_training')
@@ -360,7 +395,9 @@ function EditCrossModal({
         date: data.date,
         activity_type: data.activity_type,
         duration_seconds: durationSeconds,
-        distance_miles: showDistance ? (data.distance_miles || null) : null,
+        distance_miles: distanceMiles,
+        distance_km: distanceKm,
+        steps: data.steps && data.steps > 0 ? data.steps : null,
         notes: data.notes || null,
       })
       .eq('id', activity.id)
@@ -412,12 +449,19 @@ function EditCrossModal({
             {errors.minutes && <p className="text-xs text-red-400">{errors.minutes.message}</p>}
           </div>
 
-          {showDistance && (
-            <div className="space-y-1">
-              <Label className="text-sm text-white/60">Distance (miles)</Label>
-              <Input type="number" step="0.01" min="0" className={inputCls} {...register('distance_miles')} />
-            </div>
-          )}
+          <div className="space-y-1">
+            <Label className="text-sm text-white/60">
+              Distance (miles) <span className="text-white/30">(optional)</span>
+            </Label>
+            <Input type="number" step="0.01" min="0" className={inputCls} {...register('distance_miles')} />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-sm text-white/60">
+              Steps <span className="text-white/30">(optional)</span>
+            </Label>
+            <Input type="number" min="0" className={inputCls} {...register('steps')} />
+          </div>
 
           <div className="space-y-1">
             <Label className="text-sm text-white/60">Notes</Label>
@@ -526,7 +570,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
       if (type !== 'Runs') {
         let q = supabase
           .from('cross_training')
-          .select('id, activity_type, date, distance_miles, duration_seconds, notes, source')
+          .select('id, activity_type, date, distance_miles, duration_seconds, steps, notes, source')
           .eq('user_id', userId)
           .order('date', { ascending: false })
           .limit(fetchLimit)
@@ -543,6 +587,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
           date: c.date as string,
           distance_miles: c.distance_miles as number | null,
           duration_seconds: c.duration_seconds as number | null,
+          steps: c.steps as number | null,
           notes: c.notes as string | null,
           source: c.source as string | null,
         }))

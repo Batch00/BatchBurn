@@ -1,5 +1,15 @@
 # BatchBurn
 
+## Behavioral Guidelines
+
+1. **Think Before Coding** - State assumptions explicitly before implementing. If multiple interpretations exist, present them. If a simpler approach exists, say so. If something is unclear, stop and ask.
+
+2. **Simplicity First** - Write the minimum code that solves the problem. No features beyond what was asked. No abstractions for single-use code. No speculative flexibility or configurability. If you write 200 lines and it could be 50, rewrite it.
+
+3. **Surgical Changes** - Touch only what you must. Do not improve adjacent code that was not asked about. Do not refactor things that are not broken. Match existing style even if you would do it differently. If you notice unrelated dead code, mention it but do not delete it. Remove imports/variables/functions that YOUR changes made unused - do not remove pre-existing dead code unless asked. Every changed line should trace directly to the user's request.
+
+4. **Goal-Driven Execution** - Transform tasks into verifiable goals. For multi-step tasks, state a brief plan with verify steps. Strong success criteria let you loop independently. Clarifying questions should come before implementation.
+
 ## Project Overview
 BatchBurn is a personal workout tracking and analytics web app. It supports 
 manual activity logging (runs and cross training), Strava OAuth sync with 

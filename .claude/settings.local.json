@@ -25,7 +25,10 @@
       "Bash(npm ls:*)",
       "Bash(npm info:*)",
       "Bash(node scripts/gen-icons.mjs)",
-      "Bash(node scripts/seed-demo.mjs)"
+      "Bash(node scripts/seed-demo.mjs)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

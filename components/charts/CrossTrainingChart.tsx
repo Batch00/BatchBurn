@@ -27,6 +27,7 @@ const CROSS_TYPE_COLORS: Record<string, string> = {
   Elliptical: '#9333EA',
   Rowing: '#06B6D4',
   Climbing: '#EC4899',
+  'Ultimate Frisbee': '#16A34A',
   Other: '#6B7280',
 }
 

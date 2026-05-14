@@ -68,6 +68,7 @@ const BORDER_COLORS: Record<string, string> = {
   Elliptical: 'border-l-purple-600',
   Rowing: 'border-l-cyan-500',
   Climbing: 'border-l-pink-500',
+  'Ultimate Frisbee': 'border-l-green-600',
   Other: 'border-l-gray-500',
 }
 
@@ -94,6 +95,7 @@ const BADGE_COLORS: Record<string, string> = {
   Elliptical: 'bg-purple-600/15 text-purple-400',
   Rowing: 'bg-cyan-500/15 text-cyan-400',
   Climbing: 'bg-pink-500/15 text-pink-400',
+  'Ultimate Frisbee': 'bg-green-600/15 text-green-500',
   Other: 'bg-gray-500/15 text-gray-400',
 }
 
@@ -114,6 +116,7 @@ const CROSS_TYPES = [
   'Elliptical',
   'Rowing',
   'Climbing',
+  'Ultimate Frisbee',
   'Other',
 ] as const
 
@@ -354,15 +357,22 @@ function EditRunModal({
 
 function EditCrossModal({
   activity,
+  hiddenTypes,
   onClose,
   onSaved,
 }: {
   activity: UnifiedActivity
+  hiddenTypes: string[]
   onClose: () => void
   onSaved: () => void
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const hms = secondsToHMS(activity.duration_seconds ?? 0)
+
+  const currentType = activity.activity_type ?? ''
+  const visibleTypes = CROSS_TYPES.filter(
+    (t) => t === 'Other' || t === currentType || !hiddenTypes.includes(t),
+  )
 
   const {
     register,
@@ -423,7 +433,7 @@ function EditCrossModal({
           <div className="space-y-1">
             <Label className="text-sm text-white/60">Activity Type</Label>
             <Select {...register('activity_type')}>
-              {CROSS_TYPES.map((t) => (
+              {visibleTypes.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </Select>
@@ -501,9 +511,10 @@ interface HistoryClientProps {
   initialActivities: UnifiedActivity[]
   userId: string
   isDemoUser?: boolean
+  hiddenTypes?: string[]
 }
 
-export function HistoryClient({ initialActivities, userId, isDemoUser = false }: HistoryClientProps) {
+export function HistoryClient({ initialActivities, userId, isDemoUser = false, hiddenTypes = [] }: HistoryClientProps) {
   const router = useRouter()
   const [filterType, setFilterType] = useState<FilterType>('All')
   const [dateRange, setDateRange] = useState<DateRange>('All Time')
@@ -693,6 +704,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false }:
       {editActivity?.kind === 'cross' && (
         <EditCrossModal
           activity={editActivity}
+          hiddenTypes={hiddenTypes}
           onClose={() => setEditActivity(null)}
           onSaved={handleEditSaved}
         />

@@ -24,6 +24,26 @@ const STRAVA_AUTH_URL =
   '&redirect_uri=https://batchburn.batch-apps.com/api/strava/callback' +
   '&approval_prompt=force&scope=activity:read_all'
 
+const CROSS_TYPES = [
+  'Bike',
+  'Walk',
+  'Stair Master',
+  'Swim',
+  'Strength',
+  'Yoga',
+  'Soccer',
+  'Tennis',
+  'Pickleball',
+  'Basketball',
+  'Hiking',
+  'Treadmill',
+  'Elliptical',
+  'Rowing',
+  'Climbing',
+  'Ultimate Frisbee',
+  'Other',
+] as const
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -59,6 +79,7 @@ interface SettingsClientProps {
   isDemoUser?: boolean
   stravaAthleteId?: number | null
   stravaStatus?: string | null
+  hiddenTypes?: string[]
 }
 
 export function SettingsClient({
@@ -68,6 +89,7 @@ export function SettingsClient({
   isDemoUser = false,
   stravaAthleteId = null,
   stravaStatus = null,
+  hiddenTypes: initialHiddenTypes = [],
 }: SettingsClientProps) {
   const router = useRouter()
 
@@ -88,6 +110,28 @@ export function SettingsClient({
 
   // Password reset
   const [pwBusy, setPwBusy] = useState(false)
+
+  // Activity type visibility
+  const [hiddenTypes, setHiddenTypes] = useState<string[]>(initialHiddenTypes)
+
+  async function toggleActivityType(type: string) {
+    if (type === 'Other') return
+    const next = hiddenTypes.includes(type)
+      ? hiddenTypes.filter((t) => t !== type)
+      : [...hiddenTypes, type]
+    setHiddenTypes(next)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('profiles')
+      .update({ hidden_activity_types: next })
+      .eq('user_id', userId)
+    if (error) {
+      setHiddenTypes(hiddenTypes)
+      toast(error.message, 'error')
+    }
+  }
+
+  const visibleCount = CROSS_TYPES.filter((t) => !hiddenTypes.includes(t)).length
 
   async function runImport() {
     setImportStatus('importing')
@@ -236,6 +280,39 @@ export function SettingsClient({
           </Button>
         </div>
       </Section>
+
+      {/* Activity Types */}
+      {!isDemoUser && (
+        <Section title="Activity Types">
+          <p className="-mt-2 text-xs text-white/40">Hide types you don&apos;t use</p>
+          <div className="flex flex-wrap gap-2">
+            {CROSS_TYPES.map((type) => {
+              const isHidden = hiddenTypes.includes(type)
+              const isOther = type === 'Other'
+              const baseCls = 'rounded-full px-3 py-1 text-xs font-medium transition-colors'
+              const cls = isHidden
+                ? `${baseCls} cursor-pointer border border-white/10 bg-white/5 text-white/30 line-through`
+                : isOther
+                  ? `${baseCls} cursor-default bg-[#C41230] text-white opacity-70`
+                  : `${baseCls} cursor-pointer bg-[#C41230] text-white hover:bg-[#A10F29]`
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => toggleActivityType(type)}
+                  disabled={isOther}
+                  className={cls}
+                >
+                  {type}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-white/40">
+            {visibleCount} of {CROSS_TYPES.length} types visible
+          </p>
+        </Section>
+      )}
 
       {/* Integrations */}
       <Section title="Integrations">

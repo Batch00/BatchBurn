@@ -282,6 +282,7 @@ const CROSS_TYPES = [
   'Elliptical',
   'Rowing',
   'Climbing',
+  'Ultimate Frisbee',
   'Other',
 ] as const
 
@@ -301,8 +302,19 @@ const crossSchema = z
     path: ['minutes'],
   })
 
-function CrossTrainingForm({ userId }: { userId: string }) {
+function CrossTrainingForm({
+  userId,
+  hiddenTypes,
+}: {
+  userId: string
+  hiddenTypes: string[]
+}) {
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const visibleTypes = CROSS_TYPES.filter(
+    (t) => t === 'Other' || !hiddenTypes.includes(t),
+  )
+  const defaultType = (visibleTypes[0] ?? 'Other') as (typeof CROSS_TYPES)[number]
 
   const {
     register,
@@ -313,7 +325,7 @@ function CrossTrainingForm({ userId }: { userId: string }) {
     resolver: zodResolver(crossSchema),
     defaultValues: {
       date: todayStr(),
-      activity_type: 'Bike',
+      activity_type: defaultType,
       notes: '',
     },
   })
@@ -344,7 +356,7 @@ function CrossTrainingForm({ userId }: { userId: string }) {
 
     toast('Activity logged successfully!')
     await revalidateAll()
-    reset({ date: todayStr(), activity_type: 'Bike', notes: '' })
+    reset({ date: todayStr(), activity_type: defaultType, notes: '' })
   }
 
   return (
@@ -366,7 +378,7 @@ function CrossTrainingForm({ userId }: { userId: string }) {
           Activity Type
         </Label>
         <Select id="cross-type" {...register('activity_type')}>
-          {CROSS_TYPES.map((t) => (
+          {visibleTypes.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
@@ -486,10 +498,12 @@ export function LogActivityClient({
   shoes,
   userId,
   isDemoUser = false,
+  hiddenTypes = [],
 }: {
   shoes: Shoe[]
   userId: string
   isDemoUser?: boolean
+  hiddenTypes?: string[]
 }) {
   const [activeTab, setActiveTab] = useState<'run' | 'cross'>('run')
 
@@ -540,7 +554,7 @@ export function LogActivityClient({
       {activeTab === 'run' ? (
         <RunForm shoes={shoes} userId={userId} />
       ) : (
-        <CrossTrainingForm userId={userId} />
+        <CrossTrainingForm userId={userId} hiddenTypes={hiddenTypes} />
       )}
     </div>
   )

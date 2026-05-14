@@ -25,6 +25,7 @@ const typeColors: Record<string, string> = {
   Elliptical: 'border-l-purple-600',
   Rowing: 'border-l-cyan-500',
   Climbing: 'border-l-pink-500',
+  'Ultimate Frisbee': 'border-l-green-600',
   Other: 'border-l-gray-500',
 }
 
@@ -51,6 +52,7 @@ const typeBadgeColors: Record<string, string> = {
   Elliptical: 'bg-purple-600/15 text-purple-400',
   Rowing: 'bg-cyan-500/15 text-cyan-400',
   Climbing: 'bg-pink-500/15 text-pink-400',
+  'Ultimate Frisbee': 'bg-green-600/15 text-green-500',
   Other: 'bg-gray-500/15 text-gray-400',
 }
 

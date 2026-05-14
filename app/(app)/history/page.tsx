@@ -11,7 +11,7 @@ export default async function HistoryPage() {
   const userId = user!.id
   const isDemoUser = user!.email === 'demo@batchburn.app'
 
-  const [{ data: runs }, { data: cross }] = await Promise.all([
+  const [{ data: runs }, { data: cross }, { data: profile }] = await Promise.all([
     supabase
       .from('runs')
       .select(
@@ -26,7 +26,14 @@ export default async function HistoryPage() {
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(20),
+    supabase
+      .from('profiles')
+      .select('hidden_activity_types')
+      .eq('user_id', userId)
+      .single(),
   ])
+
+  const hiddenTypes = (profile?.hidden_activity_types as string[] | null) ?? []
 
   const runActivities: UnifiedActivity[] = (runs ?? []).map((r) => ({
     id: r.id as string,
@@ -66,7 +73,12 @@ export default async function HistoryPage() {
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">
       <h1 className="mb-6 text-2xl font-bold text-white">History</h1>
-      <HistoryClient initialActivities={initialActivities} userId={userId} isDemoUser={isDemoUser} />
+      <HistoryClient
+        initialActivities={initialActivities}
+        userId={userId}
+        isDemoUser={isDemoUser}
+        hiddenTypes={hiddenTypes}
+      />
     </div>
   )
 }

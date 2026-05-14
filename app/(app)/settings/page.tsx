@@ -19,12 +19,13 @@ export default async function SettingsPage({
 
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, strava_athlete_id')
+    .select('display_name, strava_athlete_id, hidden_activity_types')
     .eq('user_id', userId)
     .single()
 
   const displayName = (profileData?.display_name as string | null) ?? ''
   const stravaAthleteId = (profileData?.strava_athlete_id as number | null) ?? null
+  const hiddenTypes = (profileData?.hidden_activity_types as string[] | null) ?? []
 
   return (
     <div className="mx-auto max-w-2xl p-4 md:p-6">
@@ -36,6 +37,7 @@ export default async function SettingsPage({
         isDemoUser={isDemoUser}
         stravaAthleteId={stravaAthleteId}
         stravaStatus={stravaStatus}
+        hiddenTypes={hiddenTypes}
       />
     </div>
   )

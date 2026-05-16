@@ -1,12 +1,10 @@
 export const revalidate = 0
 
 import { createClient } from '@/lib/supabase/server'
-import { KpiCard } from '@/components/dashboard/KpiCard'
 import { DashboardClient, type WeekBucket, type RawWeeklyRun, type RawWeeklyCross } from '@/components/dashboard/DashboardClient'
 import { ShoeHealthWidget, type Shoe } from '@/components/dashboard/ShoeHealthWidget'
 import { GoalProgress, type Goal } from '@/components/dashboard/GoalProgress'
 import { type Activity } from '@/components/dashboard/ActivityFeed'
-import { formatPace } from '@/lib/utils/pace'
 
 function getMonday(d: Date): Date {
   const date = new Date(d)
@@ -43,6 +41,9 @@ export default async function DashboardPage() {
     { data: wtdRuns },
     { data: mtdRuns },
     { data: ytdRuns },
+    { data: wtdCross },
+    { data: mtdCross },
+    { data: ytdCross },
     { data: recentRuns },
     { data: recentCross },
     { data: weeklyRuns },
@@ -53,7 +54,7 @@ export default async function DashboardPage() {
     // WTD runs
     supabase
       .from('runs')
-      .select('distance_miles, pace_per_mile_seconds')
+      .select('distance_miles, duration_seconds, pace_per_mile_seconds')
       .eq('user_id', userId)
       .gte('date', toDateStr(monday))
       .lte('date', toDateStr(now)),
@@ -67,6 +68,27 @@ export default async function DashboardPage() {
     // YTD runs
     supabase
       .from('runs')
+      .select('distance_miles')
+      .eq('user_id', userId)
+      .gte('date', toDateStr(yearStart))
+      .lte('date', toDateStr(now)),
+    // WTD cross training
+    supabase
+      .from('cross_training')
+      .select('distance_miles, duration_seconds')
+      .eq('user_id', userId)
+      .gte('date', toDateStr(monday))
+      .lte('date', toDateStr(now)),
+    // MTD cross training
+    supabase
+      .from('cross_training')
+      .select('distance_miles')
+      .eq('user_id', userId)
+      .gte('date', toDateStr(monthStart))
+      .lte('date', toDateStr(now)),
+    // YTD cross training
+    supabase
+      .from('cross_training')
       .select('distance_miles')
       .eq('user_id', userId)
       .gte('date', toDateStr(yearStart))
@@ -119,6 +141,19 @@ export default async function DashboardPage() {
   const wtdMiles = (wtdRuns ?? []).reduce((s, r) => s + (r.distance_miles ?? 0), 0)
   const mtdMiles = (mtdRuns ?? []).reduce((s, r) => s + (r.distance_miles ?? 0), 0)
   const ytdMiles = (ytdRuns ?? []).reduce((s, r) => s + (r.distance_miles ?? 0), 0)
+
+  // All-active totals (runs + cross training, null distance treated as 0)
+  const wtdCrossMiles = (wtdCross ?? []).reduce((s, c) => s + (c.distance_miles ?? 0), 0)
+  const mtdCrossMiles = (mtdCross ?? []).reduce((s, c) => s + (c.distance_miles ?? 0), 0)
+  const ytdCrossMiles = (ytdCross ?? []).reduce((s, c) => s + (c.distance_miles ?? 0), 0)
+  const activeWtdMiles = wtdMiles + wtdCrossMiles
+  const activeMtdMiles = mtdMiles + mtdCrossMiles
+  const activeYtdMiles = ytdMiles + ytdCrossMiles
+
+  // WTD combined duration for active-mode "Total Time" card
+  const wtdRunDuration = (wtdRuns ?? []).reduce((s, r) => s + (r.duration_seconds ?? 0), 0)
+  const wtdCrossDuration = (wtdCross ?? []).reduce((s, c) => s + (c.duration_seconds ?? 0), 0)
+  const activeWtdDuration = wtdRunDuration + wtdCrossDuration
 
   // Weighted avg pace this week
   const wtdRunsWithPace = (wtdRuns ?? []).filter(
@@ -184,36 +219,16 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard
-          label="WTD Miles"
-          value={wtdMiles.toFixed(1)}
-          unit="miles"
-          sublabel="runs only"
-        />
-        <KpiCard
-          label="MTD Miles"
-          value={mtdMiles.toFixed(1)}
-          unit="miles"
-          sublabel="runs only"
-        />
-        <KpiCard
-          label="YTD Miles"
-          value={ytdMiles.toFixed(1)}
-          unit="miles"
-          sublabel="runs only"
-        />
-        <KpiCard
-          label="Avg Pace"
-          value={avgPace > 0 ? formatPace(avgPace) : '--:--'}
-          unit="min/mi"
-          sublabel="This week · runs only"
-        />
-      </div>
-
-      {/* Filter chips + Chart + Activity Feed (client-side filtering) */}
+      {/* KPI toggle + cards + filter chips + Chart + Activity Feed (client-side state) */}
       <DashboardClient
+        wtdMiles={wtdMiles}
+        mtdMiles={mtdMiles}
+        ytdMiles={ytdMiles}
+        avgPace={avgPace}
+        activeWtdMiles={activeWtdMiles}
+        activeMtdMiles={activeMtdMiles}
+        activeYtdMiles={activeYtdMiles}
+        activeWtdDuration={activeWtdDuration}
         weeklyRuns={rawWeeklyRuns}
         weeklyCross={rawWeeklyCross}
         weekBuckets={weekBuckets}

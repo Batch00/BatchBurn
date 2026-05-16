@@ -28,7 +28,8 @@
       "Bash(node scripts/seed-demo.mjs)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

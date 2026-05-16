@@ -5,6 +5,7 @@ import { DashboardClient, type WeekBucket, type RawWeeklyRun, type RawWeeklyCros
 import { ShoeHealthWidget, type Shoe } from '@/components/dashboard/ShoeHealthWidget'
 import { GoalProgress, type Goal } from '@/components/dashboard/GoalProgress'
 import { type Activity } from '@/components/dashboard/ActivityFeed'
+import { RefreshButton } from '@/components/ui/RefreshButton'
 
 function getMonday(d: Date): Date {
   const date = new Date(d)
@@ -217,7 +218,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
-      <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+        <RefreshButton />
+      </div>
 
       {/* KPI toggle + cards + filter chips + Chart + Activity Feed (client-side state) */}
       <DashboardClient

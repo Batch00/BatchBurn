@@ -2,6 +2,7 @@ export const revalidate = 0
 
 import { createClient } from '@/lib/supabase/server'
 import { HistoryClient, type UnifiedActivity } from '@/components/history/HistoryClient'
+import { RefreshButton } from '@/components/ui/RefreshButton'
 
 export default async function HistoryPage() {
   const supabase = await createClient()
@@ -72,7 +73,10 @@ export default async function HistoryPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-6">
-      <h1 className="mb-6 text-2xl font-bold text-white">History</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">History</h1>
+        <RefreshButton />
+      </div>
       <HistoryClient
         initialActivities={initialActivities}
         userId={userId}

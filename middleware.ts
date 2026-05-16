@@ -18,6 +18,17 @@ export async function middleware(request: NextRequest) {
 
   let supabaseResponse = NextResponse.next({ request })
 
+  // Force long-lived auth cookies so the session survives PWA close on mobile.
+  // Supabase's default options may omit Max-Age, making them session cookies that
+  // die when the browser/PWA closes. The JWT inside still expires per Supabase's
+  // project config — the refresh token cookie just needs to outlive that.
+  const persistentCookieOptions = {
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: process.env.NODE_ENV === 'production',
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -31,7 +42,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options))
+            supabaseResponse.cookies.set(name, value, { ...options, ...persistentCookieOptions }))
         },
       },
     }

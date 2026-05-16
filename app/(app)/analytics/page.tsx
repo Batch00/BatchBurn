@@ -6,6 +6,7 @@ import {
   type AnalyticsData,
   type MileageByTypeRow,
 } from '@/components/analytics/AnalyticsClient'
+import { RefreshButton } from '@/components/ui/RefreshButton'
 
 type Period = 'month' | '3months' | 'year' | 'all'
 
@@ -241,7 +242,10 @@ export default async function AnalyticsPage({
 
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-6">
-      <h1 className="mb-6 text-2xl font-bold text-white">Analytics</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">Analytics</h1>
+        <RefreshButton />
+      </div>
       <AnalyticsClient data={analyticsData} period={period} />
     </div>
   )

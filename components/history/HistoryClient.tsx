@@ -820,50 +820,57 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                   onClick={() => setExpandedId(isExpanded ? null : activity.id)}
                   className={`w-full rounded-lg border-l-2 bg-white/[0.03] px-3 py-3 text-left transition-colors hover:bg-white/[0.06] ${borderColor}`}
                 >
-                  <div className="flex items-center justify-between">
-                    {/* Left: badge + date */}
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
-                      >
-                        {activity.label}
-                      </span>
-                      {activity.source === 'strava' && (
-                        <span
-                          title="Synced from Strava"
-                          aria-label="Synced from Strava"
-                          className="shrink-0"
-                        >
-                          <Zap className="size-3 text-[#FC4C02]" fill="#FC4C02" />
+                  <div className="flex items-start justify-between gap-2 sm:items-center">
+                    {/* Main content: stacks on mobile, single row on desktop */}
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                      {/* Mobile rows 1 + 2: badge/strava, then date */}
+                      <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
+                          >
+                            {activity.label}
+                          </span>
+                          {activity.source === 'strava' && (
+                            <span
+                              title="Synced from Strava"
+                              aria-label="Synced from Strava"
+                              className="shrink-0"
+                            >
+                              <Zap className="size-3 text-[#FC4C02]" fill="#FC4C02" />
+                            </span>
+                          )}
+                        </div>
+                        <span className="whitespace-nowrap text-sm text-white/50">
+                          {formatDate(activity.date)}
                         </span>
-                      )}
-                      <span className="truncate text-sm text-white/50">
-                        {formatDate(activity.date)}
-                      </span>
-                    </div>
+                      </div>
 
-                    {/* Right: stats + menu */}
-                    <div className="ml-4 flex shrink-0 items-center gap-3 text-sm">
-                      {activity.distance_miles != null && (
-                        <span className="text-white">
-                          {activity.distance_miles.toFixed(2)} mi
-                        </span>
-                      )}
-                      {activity.duration_seconds != null && (
-                        <span className="text-white/50">
-                          {formatDuration(activity.duration_seconds)}
-                        </span>
-                      )}
-                      {activity.kind === 'run' &&
-                        activity.pace_per_mile_seconds != null && (
-                          <span className="hidden text-white/40 sm:block">
-                            {formatPace(activity.pace_per_mile_seconds)} /mi
+                      {/* Mobile row 3 / desktop right: stats */}
+                      <div className="flex items-center gap-3 text-sm sm:shrink-0">
+                        {activity.distance_miles != null && (
+                          <span className="text-white">
+                            {activity.distance_miles.toFixed(2)} mi
                           </span>
                         )}
+                        {activity.duration_seconds != null && (
+                          <span className="text-white/50">
+                            {formatDuration(activity.duration_seconds)}
+                          </span>
+                        )}
+                        {activity.kind === 'run' &&
+                          activity.pace_per_mile_seconds != null && (
+                            <span className="text-white/40">
+                              {formatPace(activity.pace_per_mile_seconds)} /mi
+                            </span>
+                          )}
+                      </div>
+                    </div>
 
-                      {/* More menu */}
-                      {!isDemoUser && <div
-                        className="relative"
+                    {/* More menu: always top-right */}
+                    {!isDemoUser && (
+                      <div
+                        className="relative shrink-0"
                         ref={isMenuOpen ? menuRef : null}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -900,8 +907,8 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                             </button>
                           </div>
                         )}
-                      </div>}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Shoe name */}

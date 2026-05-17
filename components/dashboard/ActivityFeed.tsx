@@ -116,7 +116,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
             >
               <div className="flex items-center gap-2">
                 <span
-                  className={`rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
+                  className={`shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
                 >
                   {label}
                 </span>

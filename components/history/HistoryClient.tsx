@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -533,7 +533,6 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
   const [editActivity, setEditActivity] = useState<UnifiedActivity | null>(null)
   const [editShoes, setEditShoes] = useState<{ id: string; name: string }[]>([])
   const [shoesFetched, setShoesFetched] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
 
   const fetchActivities = useCallback(
     async (type: FilterType, range: DateRange, lim: number) => {
@@ -628,9 +627,9 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
   useEffect(() => {
     if (!menuOpenId) return
     function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpenId(null)
-      }
+      const target = e.target as Element | null
+      if (target?.closest(`[data-activity-menu="${menuOpenId}"]`)) return
+      setMenuOpenId(null)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -818,60 +817,13 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                 <button
                   type="button"
                   onClick={() => setExpandedId(isExpanded ? null : activity.id)}
-                  className={`w-full rounded-lg border-l-2 bg-white/[0.03] px-3 py-3 text-left transition-colors hover:bg-white/[0.06] ${borderColor}`}
+                  className={`w-full rounded-lg border-l-2 bg-white/[0.03] p-3 text-left transition-colors hover:bg-white/[0.06] ${borderColor}`}
                 >
-                  <div className="flex items-start justify-between gap-2 sm:items-center">
-                    {/* Main content: stacks on mobile, single row on desktop */}
-                    <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                      {/* Mobile rows 1 + 2: badge/strava, then date */}
-                      <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
-                          >
-                            {activity.label}
-                          </span>
-                          {activity.source === 'strava' && (
-                            <span
-                              title="Synced from Strava"
-                              aria-label="Synced from Strava"
-                              className="shrink-0"
-                            >
-                              <Zap className="size-3 text-[#FC4C02]" fill="#FC4C02" />
-                            </span>
-                          )}
-                        </div>
-                        <span className="whitespace-nowrap text-sm text-white/50">
-                          {formatDate(activity.date)}
-                        </span>
-                      </div>
-
-                      {/* Mobile row 3 / desktop right: stats */}
-                      <div className="flex items-center gap-3 text-sm sm:shrink-0">
-                        {activity.distance_miles != null && (
-                          <span className="text-white">
-                            {activity.distance_miles.toFixed(2)} mi
-                          </span>
-                        )}
-                        {activity.duration_seconds != null && (
-                          <span className="text-white/50">
-                            {formatDuration(activity.duration_seconds)}
-                          </span>
-                        )}
-                        {activity.kind === 'run' &&
-                          activity.pace_per_mile_seconds != null && (
-                            <span className="text-white/40">
-                              {formatPace(activity.pace_per_mile_seconds)} /mi
-                            </span>
-                          )}
-                      </div>
-                    </div>
-
-                    {/* More menu: always top-right */}
-                    {!isDemoUser && (
+                  {(() => {
+                    const menuNode = !isDemoUser ? (
                       <div
+                        data-activity-menu={activity.id}
                         className="relative shrink-0"
-                        ref={isMenuOpen ? menuRef : null}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
@@ -884,7 +836,6 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                         >
                           <MoreHorizontal className="size-4" />
                         </button>
-
                         {isMenuOpen && (
                           <div className="absolute right-0 top-8 z-10 min-w-[120px] rounded-lg border border-white/10 bg-[#161B22] py-1 shadow-xl">
                             <button
@@ -908,8 +859,62 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
+                    ) : null
+
+                    return (
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                        {/* Mobile row 1 / Desktop left cluster: badge + strava (+ date on desktop) + menu (mobile only) */}
+                        <div className="flex items-center justify-between gap-2 sm:justify-start">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className={`shrink-0 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ${badgeColor}`}
+                            >
+                              {activity.label}
+                            </span>
+                            {activity.source === 'strava' && (
+                              <span
+                                title="Synced from Strava"
+                                aria-label="Synced from Strava"
+                                className="shrink-0"
+                              >
+                                <Zap className="size-3 text-[#FC4C02]" fill="#FC4C02" />
+                              </span>
+                            )}
+                            <span className="hidden whitespace-nowrap text-sm text-white/50 sm:inline">
+                              {formatDate(activity.date)}
+                            </span>
+                          </div>
+                          <div className="sm:hidden">{menuNode}</div>
+                        </div>
+
+                        {/* Mobile row 2 / Desktop right cluster: date (mobile only) + stats + menu (desktop only) */}
+                        <div className="flex items-center justify-between gap-3 sm:justify-end">
+                          <span className="whitespace-nowrap text-sm text-white/70 sm:hidden">
+                            {formatDate(activity.date)}
+                          </span>
+                          <div className="flex items-center gap-3 text-sm">
+                            {activity.distance_miles != null && (
+                              <span className="text-white">
+                                {activity.distance_miles.toFixed(2)} mi
+                              </span>
+                            )}
+                            {activity.duration_seconds != null && (
+                              <span className="text-white/50">
+                                {formatDuration(activity.duration_seconds)}
+                              </span>
+                            )}
+                            {activity.kind === 'run' &&
+                              activity.pace_per_mile_seconds != null && (
+                                <span className="text-white/40">
+                                  {formatPace(activity.pace_per_mile_seconds)} /mi
+                                </span>
+                              )}
+                          </div>
+                          <div className="hidden sm:block">{menuNode}</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* Shoe name */}
                   {activity.shoe_name && (

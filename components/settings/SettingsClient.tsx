@@ -107,6 +107,8 @@ export function SettingsClient({
   const [stravaDisconnecting, setStravaDisconnecting] = useState(false)
   const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle')
   const [importCount, setImportCount] = useState(0)
+  const [backfillStatus, setBackfillStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
+  const [backfillCount, setBackfillCount] = useState(0)
 
   // Password reset
   const [pwBusy, setPwBusy] = useState(false)
@@ -132,6 +134,22 @@ export function SettingsClient({
   }
 
   const visibleCount = CROSS_TYPES.filter((t) => !hiddenTypes.includes(t)).length
+
+  async function runBackfill() {
+    setBackfillStatus('running')
+    try {
+      const res = await fetch('/api/strava/backfill', { method: 'POST' })
+      if (!res.ok) throw new Error('non-ok response')
+      const data = await res.json()
+      setBackfillCount((data.updated_runs ?? 0) + (data.updated_cross ?? 0))
+      setBackfillStatus('success')
+      router.refresh()
+      await revalidateAll()
+    } catch {
+      console.error('Strava backfill failed')
+      setBackfillStatus('error')
+    }
+  }
 
   async function runImport() {
     setImportStatus('importing')
@@ -368,6 +386,29 @@ export function SettingsClient({
                   'Sync Now'
                 )}
               </Button>
+              <Button
+                onClick={runBackfill}
+                disabled={backfillStatus === 'running'}
+                variant="outline"
+                className="border-white/10 text-white/70 hover:border-white/20 hover:text-white disabled:opacity-50"
+              >
+                {backfillStatus === 'running' ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="size-4 animate-spin" />
+                    Backfilling…
+                  </span>
+                ) : (
+                  'Backfill Strava Data'
+                )}
+              </Button>
+              {backfillStatus === 'success' && (
+                <p className="text-xs text-green-400">
+                  Backfill complete — {backfillCount} {backfillCount === 1 ? 'activity' : 'activities'} updated
+                </p>
+              )}
+              {backfillStatus === 'error' && (
+                <p className="text-xs text-red-400">Backfill failed. Try again.</p>
+              )}
             </div>
           ) : (
             <a

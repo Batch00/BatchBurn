@@ -30,7 +30,9 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(npx tsc *)",
-      "PowerShell(npm run *)"
+      "PowerShell(npm run *)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\carso\\\\Batch Apps\\\\BatchBurn\\\\app\\\\\\(app\\)\\\\activities\\\\run\\\\[id]\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\carso\\\\Batch Apps\\\\BatchBurn\\\\app\\\\\\(app\\)\\\\activities\\\\cross\\\\[id]\")"
     ]
   }
 }

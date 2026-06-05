@@ -110,9 +110,10 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
             typeBadgeColors[label] || 'bg-white/10 text-white/60'
 
           return (
-            <div
+            <Link
               key={activity.id}
-              className={`flex items-center justify-between rounded-lg border-l-2 bg-white/[0.03] px-3 py-2.5 ${borderColor}`}
+              href={activity.is_run ? `/activities/run/${activity.id}` : `/activities/cross/${activity.id}`}
+              className={`flex items-center justify-between rounded-lg border-l-2 bg-white/[0.03] px-3 py-2.5 transition-colors hover:bg-white/[0.07] ${borderColor}`}
             >
               <div className="flex items-center gap-2">
                 <span
@@ -148,7 +149,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
                   </span>
                 )}
               </div>
-            </div>
+            </Link>
           )
         })}
       </div>

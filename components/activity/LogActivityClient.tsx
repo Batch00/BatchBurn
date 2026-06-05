@@ -99,7 +99,7 @@ function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
     const supabase = createClient()
     const durationSeconds = data.hours * 3600 + data.minutes * 60 + data.seconds
     const pacePerMileSeconds = Math.round(durationSeconds / data.distance)
-    const distanceKm = data.distance * 1.60934
+    const distanceKm = Math.round(data.distance * 1.60934 * 10000) / 10000
 
     const { error } = await supabase.from('runs').insert({
       user_id: userId,
@@ -335,7 +335,7 @@ function CrossTrainingForm({
     const supabase = createClient()
     const durationSeconds = data.hours * 3600 + data.minutes * 60 + data.seconds
     const distanceMiles = data.distance_miles && data.distance_miles > 0 ? data.distance_miles : null
-    const distanceKm = distanceMiles ? distanceMiles * 1.60934 : null
+    const distanceKm = distanceMiles ? Math.round(distanceMiles * 1.60934 * 10000) / 10000 : null
 
     const { error } = await supabase.from('cross_training').insert({
       user_id: userId,

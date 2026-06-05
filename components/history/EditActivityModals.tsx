@@ -99,7 +99,7 @@ export function EditRunModal({
     resolver: zodResolver(editRunSchema),
     defaultValues: {
       date: activity.date,
-      distance: activity.distance_miles ?? 0,
+      distance: Math.round((activity.distance_miles ?? 0) * 100) / 100,
       hours: hms.hours,
       minutes: hms.minutes,
       seconds: hms.seconds,
@@ -113,14 +113,15 @@ export function EditRunModal({
     setSubmitError(null)
     const supabase = createClient()
     const durationSeconds = data.hours * 3600 + data.minutes * 60 + data.seconds
-    const pacePerMileSeconds = Math.round(durationSeconds / data.distance)
-    const distanceKm = data.distance * 1.60934
+    const distanceMiles = Math.round(data.distance * 100) / 100
+    const pacePerMileSeconds = Math.round(durationSeconds / distanceMiles)
+    const distanceKm = distanceMiles * 1.60934
 
     const { error } = await supabase
       .from('runs')
       .update({
         date: data.date,
-        distance_miles: data.distance,
+        distance_miles: distanceMiles,
         distance_km: distanceKm,
         duration_seconds: durationSeconds,
         pace_per_mile_seconds: pacePerMileSeconds,
@@ -254,7 +255,7 @@ export function EditCrossModal({
       hours: hms.hours,
       minutes: hms.minutes,
       seconds: hms.seconds,
-      distance_miles: activity.distance_miles ?? 0,
+      distance_miles: Math.round((activity.distance_miles ?? 0) * 100) / 100,
       steps: activity.steps ?? 0,
       notes: activity.notes ?? '',
     },
@@ -264,7 +265,10 @@ export function EditCrossModal({
     setSubmitError(null)
     const supabase = createClient()
     const durationSeconds = data.hours * 3600 + data.minutes * 60 + data.seconds
-    const distanceMiles = data.distance_miles && data.distance_miles > 0 ? data.distance_miles : null
+    const distanceMiles =
+      data.distance_miles && data.distance_miles > 0
+        ? Math.round(data.distance_miles * 100) / 100
+        : null
     const distanceKm = distanceMiles ? distanceMiles * 1.60934 : null
 
     const { error } = await supabase

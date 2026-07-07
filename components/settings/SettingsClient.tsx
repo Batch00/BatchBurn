@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -17,12 +17,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { toast } from '@/lib/hooks/use-toast'
-import { revalidateAll } from '@/lib/actions'
-
-const STRAVA_AUTH_URL =
-  'https://www.strava.com/oauth/authorize?client_id=229161&response_type=code' +
-  '&redirect_uri=https://batchburn.batch-apps.com/api/strava/callback' +
-  '&approval_prompt=force&scope=activity:read_all'
 
 const CROSS_TYPES = [
   'Bike',
@@ -87,8 +81,6 @@ export function SettingsClient({
   email,
   displayName: initialDisplayName,
   isDemoUser = false,
-  stravaAthleteId = null,
-  stravaStatus = null,
   hiddenTypes: initialHiddenTypes = [],
 }: SettingsClientProps) {
   const router = useRouter()
@@ -100,15 +92,6 @@ export function SettingsClient({
   // Danger zone
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
-
-  // Strava
-  const [stravaConnected, setStravaConnected] = useState(!!stravaAthleteId)
-  const [stravaId, setStravaId] = useState(stravaAthleteId)
-  const [stravaDisconnecting, setStravaDisconnecting] = useState(false)
-  const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle')
-  const [importCount, setImportCount] = useState(0)
-  const [backfillStatus, setBackfillStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle')
-  const [backfillCount, setBackfillCount] = useState(0)
 
   // Password reset
   const [pwBusy, setPwBusy] = useState(false)
@@ -134,46 +117,6 @@ export function SettingsClient({
   }
 
   const visibleCount = CROSS_TYPES.filter((t) => !hiddenTypes.includes(t)).length
-
-  async function runBackfill() {
-    setBackfillStatus('running')
-    try {
-      const res = await fetch('/api/strava/backfill', { method: 'POST' })
-      if (!res.ok) throw new Error('non-ok response')
-      const data = await res.json()
-      setBackfillCount((data.updated_runs ?? 0) + (data.updated_cross ?? 0))
-      setBackfillStatus('success')
-      router.refresh()
-      await revalidateAll()
-    } catch {
-      console.error('Strava backfill failed')
-      setBackfillStatus('error')
-    }
-  }
-
-  async function runImport() {
-    setImportStatus('importing')
-    try {
-      const res = await fetch('/api/strava/import', { method: 'POST' })
-      if (!res.ok) throw new Error('non-ok response')
-      const data = await res.json()
-      setImportCount((data.imported ?? 0) + (data.synced ?? 0))
-      setImportStatus('success')
-      router.refresh()
-      await revalidateAll()
-    } catch {
-      console.error('Strava import failed')
-      setImportStatus('error')
-    }
-  }
-
-  useEffect(() => {
-    if (stravaStatus === 'connected') {
-      router.replace('/settings', { scroll: false })
-      void runImport()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   async function saveDisplayName() {
     setNameSaving(true)
@@ -201,19 +144,6 @@ export function SettingsClient({
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
-  }
-
-  async function disconnectStrava() {
-    setStravaDisconnecting(true)
-    const res = await fetch('/api/strava/disconnect', { method: 'POST' })
-    setStravaDisconnecting(false)
-    if (res.ok) {
-      setStravaConnected(false)
-      setStravaId(null)
-      toast('Strava disconnected')
-    } else {
-      toast('Failed to disconnect Strava', 'error')
-    }
   }
 
   async function deleteAllData() {
@@ -334,90 +264,12 @@ export function SettingsClient({
 
       {/* Integrations */}
       <Section title="Integrations">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-white">Strava</p>
-            <p className="text-xs text-white/40">Sync your activities automatically</p>
-            {stravaConnected && importStatus === 'importing' && (
-              <p className="flex items-center gap-1.5 text-xs text-white/60">
-                <Loader2 className="size-3 animate-spin" />
-                Importing your Strava activities…
-              </p>
-            )}
-            {stravaConnected && importStatus === 'success' && (
-              <p className="text-xs text-green-400">
-                Import complete — {importCount} {importCount === 1 ? 'activity' : 'activities'} synced!
-              </p>
-            )}
-            {stravaConnected && importStatus === 'error' && (
-              <p className="text-xs text-red-400">Import failed. Try syncing manually.</p>
-            )}
-          </div>
-
-          {isDemoUser ? (
-            <span className="shrink-0 text-xs text-white/30">Not available in demo</span>
-          ) : stravaConnected ? (
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-green-400">
-                  Connected {stravaId ? `(#${stravaId})` : ''}
-                </span>
-                <Button
-                  onClick={disconnectStrava}
-                  disabled={stravaDisconnecting}
-                  variant="outline"
-                  className="border-red-500/30 text-red-400 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
-                >
-                  {stravaDisconnecting ? <Loader2 className="size-4 animate-spin" /> : 'Disconnect'}
-                </Button>
-              </div>
-              <Button
-                onClick={runImport}
-                disabled={importStatus === 'importing'}
-                variant="outline"
-                className="border-white/10 text-white/70 hover:border-white/20 hover:text-white disabled:opacity-50"
-              >
-                {importStatus === 'importing' ? (
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 className="size-4 animate-spin" />
-                    Syncing…
-                  </span>
-                ) : (
-                  'Sync Now'
-                )}
-              </Button>
-              <Button
-                onClick={runBackfill}
-                disabled={backfillStatus === 'running'}
-                variant="outline"
-                className="border-white/10 text-white/70 hover:border-white/20 hover:text-white disabled:opacity-50"
-              >
-                {backfillStatus === 'running' ? (
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 className="size-4 animate-spin" />
-                    Backfilling…
-                  </span>
-                ) : (
-                  'Backfill Strava Data'
-                )}
-              </Button>
-              {backfillStatus === 'success' && (
-                <p className="text-xs text-green-400">
-                  Backfill complete — {backfillCount} {backfillCount === 1 ? 'activity' : 'activities'} updated
-                </p>
-              )}
-              {backfillStatus === 'error' && (
-                <p className="text-xs text-red-400">Backfill failed. Try again.</p>
-              )}
-            </div>
-          ) : (
-            <a
-              href={STRAVA_AUTH_URL}
-              className="inline-flex h-8 shrink-0 items-center rounded-lg border border-white/10 bg-background px-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white"
-            >
-              Connect Strava
-            </a>
-          )}
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-white">Strava</p>
+          <p className="text-xs text-white/40">
+            Strava sync is currently unavailable — Strava now requires a paid API
+            subscription. You can still log activities manually below.
+          </p>
         </div>
       </Section>
 

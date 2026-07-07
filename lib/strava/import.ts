@@ -12,7 +12,11 @@ export async function importStravaHistory(
   )
 
   if (!response.ok) {
-    throw new Error(`Strava API error: ${response.status}`)
+    const errBody = await response.text().catch(() => '')
+    console.error(
+      `[strava-import] athlete/activities failed: status=${response.status} body=${errBody}`
+    )
+    throw new Error(`Strava API error: ${response.status} ${errBody}`)
   }
 
   const activities = (await response.json()) as Record<string, unknown>[]

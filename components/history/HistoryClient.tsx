@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, MoreHorizontal, Zap } from 'lucide-react'
+import { Loader2, MoreHorizontal, Zap, Watch } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatPace, formatDuration } from '@/lib/utils/pace'
 import { EditRunModal, EditCrossModal } from './EditActivityModals'
@@ -13,7 +13,7 @@ import { EditRunModal, EditCrossModal } from './EditActivityModals'
 
 type FilterType = 'All' | 'Runs' | 'Cross Training'
 type DateRange = 'This Week' | 'This Month' | 'This Year' | 'All Time'
-type SourceFilter = 'All' | 'Strava'
+type SourceFilter = 'All' | 'Strava' | 'Garmin CSV'
 
 export type UnifiedActivity = {
   id: string
@@ -308,7 +308,9 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
   const displayActivities =
     sourceFilter === 'Strava'
       ? baseActivities.filter((a) => a.source === 'strava')
-      : baseActivities
+      : sourceFilter === 'Garmin CSV'
+        ? baseActivities.filter((a) => a.source === 'garmin_csv')
+        : baseActivities
 
   return (
     <div className="space-y-4">
@@ -367,21 +369,26 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
         </div>
 
         <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-          {(['All', 'Strava'] as SourceFilter[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSourceFilter(s)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                sourceFilter === s
-                  ? 'bg-[#FC4C02] text-white'
-                  : 'bg-white/5 text-white/60 hover:text-white/80'
-              }`}
-            >
-              {s === 'Strava' && <Zap className="size-3" />}
-              {s === 'Strava' ? 'Strava' : 'All Sources'}
-            </button>
-          ))}
+          {(['All', 'Strava', 'Garmin CSV'] as SourceFilter[]).map((s) => {
+            const activeBg =
+              s === 'Strava' ? 'bg-[#FC4C02]' : s === 'Garmin CSV' ? 'bg-[#007CC3]' : 'bg-[#C41230]'
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSourceFilter(s)}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  sourceFilter === s
+                    ? `${activeBg} text-white`
+                    : 'bg-white/5 text-white/60 hover:text-white/80'
+                }`}
+              >
+                {s === 'Strava' && <Zap className="size-3" />}
+                {s === 'Garmin CSV' && <Watch className="size-3" />}
+                {s === 'All' ? 'All Sources' : s}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -501,6 +508,15 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                                 className="shrink-0"
                               >
                                 <Zap className="size-3 text-[#FC4C02]" fill="#FC4C02" />
+                              </span>
+                            )}
+                            {activity.source === 'garmin_csv' && (
+                              <span
+                                title="Imported from Garmin"
+                                aria-label="Imported from Garmin"
+                                className="shrink-0"
+                              >
+                                <Watch className="size-3 text-[#007CC3]" />
                               </span>
                             )}
                             <span className="hidden whitespace-nowrap text-sm text-white/50 sm:inline">

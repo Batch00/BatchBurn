@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { toast } from '@/lib/hooks/use-toast'
+import { revalidateAll } from '@/lib/actions'
 
 const CROSS_TYPES = [
   'Bike',
@@ -95,6 +96,36 @@ export function SettingsClient({
 
   // Password reset
   const [pwBusy, setPwBusy] = useState(false)
+
+  // Garmin CSV import
+  const garminInputRef = useRef<HTMLInputElement>(null)
+  const [garminFile, setGarminFile] = useState<File | null>(null)
+  const [garminUploading, setGarminUploading] = useState(false)
+  const [garminResult, setGarminResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [garminError, setGarminError] = useState<string | null>(null)
+
+  async function uploadGarminCsv() {
+    if (!garminFile) return
+    setGarminUploading(true)
+    setGarminResult(null)
+    setGarminError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', garminFile)
+      const res = await fetch('/api/import/garmin', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Import failed')
+      setGarminResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 })
+      setGarminFile(null)
+      if (garminInputRef.current) garminInputRef.current.value = ''
+      router.refresh()
+      await revalidateAll()
+    } catch (err) {
+      setGarminError(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setGarminUploading(false)
+    }
+  }
 
   // Activity type visibility
   const [hiddenTypes, setHiddenTypes] = useState<string[]>(initialHiddenTypes)
@@ -272,6 +303,74 @@ export function SettingsClient({
           </p>
         </div>
       </Section>
+
+      {/* Import from Garmin */}
+      {!isDemoUser && (
+        <Section title="Import from Garmin">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-white">Import from Garmin</p>
+              <p className="text-xs text-white/40">
+                Export your activities as CSV from connect.garmin.com (desktop browser) and upload here
+              </p>
+            </div>
+
+            <input
+              ref={garminInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => {
+                setGarminFile(e.target.files?.[0] ?? null)
+                setGarminResult(null)
+                setGarminError(null)
+              }}
+            />
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={() => garminInputRef.current?.click()}
+                variant="outline"
+                className="border-white/10 text-white/70 hover:border-white/20 hover:text-white"
+              >
+                <Upload className="mr-2 size-4" />
+                Choose CSV
+              </Button>
+
+              {garminFile && (
+                <>
+                  <span className="text-xs text-white/50">{garminFile.name}</span>
+                  <Button
+                    type="button"
+                    onClick={uploadGarminCsv}
+                    disabled={garminUploading}
+                    className="bg-[#C41230] text-white hover:bg-[#A10F29] disabled:opacity-50"
+                  >
+                    {garminUploading ? (
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="size-4 animate-spin" />
+                        Uploading…
+                      </span>
+                    ) : (
+                      'Upload'
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {garminResult && (
+              <p className="text-xs text-green-400">
+                Imported {garminResult.imported}{' '}
+                {garminResult.imported === 1 ? 'activity' : 'activities'}, skipped{' '}
+                {garminResult.skipped} {garminResult.skipped === 1 ? 'duplicate' : 'duplicates'}
+              </p>
+            )}
+            {garminError && <p className="text-xs text-red-400">{garminError}</p>}
+          </div>
+        </Section>
+      )}
 
       {/* About */}
       <Section title="About">

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Zap } from 'lucide-react'
+import { Zap, Watch } from 'lucide-react'
 import { formatPace, formatDuration } from '@/lib/utils/pace'
 
 const typeColors: Record<string, string> = {
@@ -126,6 +126,12 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
                     className="size-3 shrink-0 text-[#FC4C02]"
                     fill="#FC4C02"
                     aria-label="Synced from Strava"
+                  />
+                )}
+                {activity.source === 'garmin_csv' && (
+                  <Watch
+                    className="size-3 shrink-0 text-[#007CC3]"
+                    aria-label="Imported from Garmin"
                   />
                 )}
                 <span className="text-sm text-white/50">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { WeeklyMileageChart } from './WeeklyMileageChart'
 import { ActivityFeed, type Activity } from './ActivityFeed'
 import { KpiCard } from './KpiCard'
@@ -65,6 +65,25 @@ export function DashboardClient({
   const [kpiMode, setKpiMode] = useState<KpiMode>('runs')
   const [filter, setFilter] = useState<FilterMode>('All')
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
+
+  // Restore persisted filter selections on mount (client-side only).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const savedKpi = localStorage.getItem('batchburn_kpi_mode')
+    if (savedKpi === 'runs' || savedKpi === 'active') setKpiMode(savedKpi)
+    const savedFilter = localStorage.getItem('batchburn_activity_filter')
+    if (savedFilter === 'All' || savedFilter === 'Runs' || savedFilter === 'Cross Training') {
+      setFilter(savedFilter)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('batchburn_kpi_mode', kpiMode)
+  }, [kpiMode])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('batchburn_activity_filter', filter)
+  }, [filter])
 
   const isActive = kpiMode === 'active'
   const kpiSublabel = isActive ? 'all active' : 'runs only'

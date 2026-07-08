@@ -29,6 +29,7 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const userId = user!.id
+  const isDemoUser = user!.email === 'demo@batchburn.app'
 
   const now = new Date()
   const monday = getMonday(now)
@@ -51,6 +52,8 @@ export default async function DashboardPage() {
     { data: weeklyCross },
     { data: shoes },
     { data: goals },
+    { data: lastGarminRun },
+    { data: lastGarminCross },
   ] = await Promise.all([
     // WTD runs
     supabase
@@ -136,6 +139,24 @@ export default async function DashboardPage() {
       .select('id, period, target_value')
       .eq('user_id', userId)
       .eq('is_active', true),
+    // Most recent Garmin CSV import (runs)
+    supabase
+      .from('runs')
+      .select('created_at')
+      .eq('user_id', userId)
+      .eq('source', 'garmin_csv')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Most recent Garmin CSV import (cross training)
+    supabase
+      .from('cross_training')
+      .select('created_at')
+      .eq('user_id', userId)
+      .eq('source', 'garmin_csv')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   // Compute KPIs
@@ -204,6 +225,19 @@ export default async function DashboardPage() {
     })),
   ].sort((a, b) => b.date.localeCompare(a.date))
 
+  // Days since the most recent Garmin CSV import (null if never imported)
+  const garminTimestamps = [
+    lastGarminRun?.created_at as string | undefined,
+    lastGarminCross?.created_at as string | undefined,
+  ].filter((t): t is string => !!t)
+  const daysSinceGarminImport =
+    garminTimestamps.length === 0
+      ? null
+      : Math.floor(
+          (Date.now() - Math.max(...garminTimestamps.map((t) => new Date(t).getTime()))) /
+            86_400_000,
+        )
+
   const rawWeeklyRuns: RawWeeklyRun[] = (weeklyRuns ?? []).map((r) => ({
     date: r.date as string,
     distance_miles: r.distance_miles as number | null,
@@ -237,6 +271,8 @@ export default async function DashboardPage() {
         weeklyCross={rawWeeklyCross}
         weekBuckets={weekBuckets}
         allActivities={allActivities}
+        daysSinceGarminImport={daysSinceGarminImport}
+        isDemoUser={isDemoUser}
       />
 
       {/* Shoe Health + Goals */}

@@ -103,6 +103,7 @@ export function SettingsClient({
   const [garminUploading, setGarminUploading] = useState(false)
   const [garminResult, setGarminResult] = useState<{ imported: number; skipped: number } | null>(null)
   const [garminError, setGarminError] = useState<string | null>(null)
+  const [showGarminHelp, setShowGarminHelp] = useState(false)
 
   async function uploadGarminCsv() {
     if (!garminFile) return
@@ -313,6 +314,32 @@ export function SettingsClient({
               <p className="text-xs text-white/40">
                 Export your activities as CSV from connect.garmin.com (desktop browser) and upload here
               </p>
+              <p className="text-xs text-white/40">
+                Export your activities:{' '}
+                <a
+                  href="https://connect.garmin.com/modern/activities"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[#C41230] hover:underline"
+                >
+                  Open Garmin Connect →
+                </a>
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowGarminHelp((v) => !v)}
+                className="text-xs text-white/50 hover:text-white/70"
+              >
+                {showGarminHelp ? 'Hide instructions' : 'How to export'}
+              </button>
+              {showGarminHelp && (
+                <ol className="list-inside list-decimal space-y-0.5 text-xs text-white/50">
+                  <li>Open the link above and log in</li>
+                  <li>Scroll down to load the activities you want to export</li>
+                  <li>Click &apos;Export CSV&apos; in the top right of the activities list</li>
+                  <li>Upload the downloaded file below</li>
+                </ol>
+              )}
             </div>
 
             <input

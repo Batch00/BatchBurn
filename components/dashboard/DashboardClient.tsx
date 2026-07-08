@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
+import { X } from 'lucide-react'
 import { WeeklyMileageChart } from './WeeklyMileageChart'
 import { ActivityFeed, type Activity } from './ActivityFeed'
 import { KpiCard } from './KpiCard'
@@ -46,6 +48,8 @@ interface DashboardClientProps {
   weeklyCross: RawWeeklyCross[]
   weekBuckets: WeekBucket[]
   allActivities: Activity[]
+  daysSinceGarminImport: number | null
+  isDemoUser?: boolean
 }
 
 export function DashboardClient({
@@ -61,10 +65,33 @@ export function DashboardClient({
   weeklyCross,
   weekBuckets,
   allActivities,
+  daysSinceGarminImport,
+  isDemoUser = false,
 }: DashboardClientProps) {
   const [kpiMode, setKpiMode] = useState<KpiMode>('runs')
   const [filter, setFilter] = useState<FilterMode>('All')
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
+
+  // Garmin sync reminder — show when overdue (>=7 days) or never imported,
+  // unless dismissed this session.
+  const garminOverdue = daysSinceGarminImport === null || daysSinceGarminImport >= 7
+  const [garminBannerDismissed, setGarminBannerDismissed] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (sessionStorage.getItem('batchburn_garmin_banner_dismissed') === '1') {
+      setGarminBannerDismissed(true)
+    }
+  }, [])
+
+  function dismissGarminBanner() {
+    setGarminBannerDismissed(true)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('batchburn_garmin_banner_dismissed', '1')
+    }
+  }
+
+  const showGarminBanner = !isDemoUser && garminOverdue && !garminBannerDismissed
 
   // Restore persisted filter selections on mount (client-side only).
   useEffect(() => {
@@ -142,8 +169,34 @@ export function DashboardClient({
       })
     : null
 
+  const garminBannerText =
+    daysSinceGarminImport === null
+      ? "You haven't imported any Garmin activities yet. Head to Settings to sync your latest activities."
+      : `It's been ${daysSinceGarminImport} ${daysSinceGarminImport === 1 ? 'day' : 'days'} since your last Garmin import. Head to Settings to sync your latest activities.`
+
   return (
     <>
+      {/* Garmin sync reminder */}
+      {showGarminBanner && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-700/40 bg-amber-900/30 px-4 py-3">
+          <p className="flex-1 text-sm text-amber-200">{garminBannerText}</p>
+          <Link
+            href="/settings"
+            className="shrink-0 whitespace-nowrap rounded-md border border-amber-700/40 px-2.5 py-1 text-xs font-medium text-amber-200 transition-colors hover:bg-amber-800/30"
+          >
+            Go to Settings
+          </Link>
+          <button
+            type="button"
+            onClick={dismissGarminBanner}
+            aria-label="Dismiss reminder"
+            className="shrink-0 text-amber-200/70 transition-colors hover:text-amber-200"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+
       {/* KPI mode toggle */}
       <div className="flex flex-wrap gap-2">
         {KPI_MODES.map((mode) => (

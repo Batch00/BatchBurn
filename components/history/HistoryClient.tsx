@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, MoreHorizontal, Zap, Watch } from 'lucide-react'
+import { Loader2, MoreHorizontal, Zap, Watch, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatPace, formatDuration } from '@/lib/utils/pace'
-import { EditRunModal, EditCrossModal } from './EditActivityModals'
+import { toast } from '@/lib/hooks/use-toast'
+import { EditRunModal, EditCrossModal, CROSS_TYPES } from './EditActivityModals'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -157,6 +158,68 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
   const [editShoes, setEditShoes] = useState<{ id: string; name: string }[]>([])
   const [shoesFetched, setShoesFetched] = useState(false)
 
+  // Bulk select state
+  const [isSelectMode, setIsSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showOtherOnly, setShowOtherOnly] = useState(false)
+  const [showChangeType, setShowChangeType] = useState(false)
+  const [newType, setNewType] = useState<(typeof CROSS_TYPES)[number]>('Bike')
+  const [applyingType, setApplyingType] = useState(false)
+
+  function selectKey(activity: UnifiedActivity): string {
+    const table = activity.kind === 'run' ? 'runs' : 'cross_training'
+    return `${table}:${activity.id}`
+  }
+
+  function toggleSelected(activity: UnifiedActivity) {
+    const key = selectKey(activity)
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function exitSelectMode() {
+    setIsSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
+  async function handleApplyType() {
+    const selectedCrossIds = Array.from(selectedIds)
+      .filter((k) => k.startsWith('cross_training:'))
+      .map((k) => k.slice('cross_training:'.length))
+    const runsSkipped = selectedIds.size - selectedCrossIds.length
+
+    if (selectedCrossIds.length === 0) {
+      toast('No cross training activities selected — type change only applies to cross training', 'error')
+      return
+    }
+
+    setApplyingType(true)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('cross_training')
+      .update({ activity_type: newType })
+      .in('id', selectedCrossIds)
+    setApplyingType(false)
+
+    if (error) {
+      toast(error.message, 'error')
+      return
+    }
+
+    toast(
+      `Updated ${selectedCrossIds.length} ${selectedCrossIds.length === 1 ? 'activity' : 'activities'} to ${newType}` +
+        (runsSkipped > 0 ? ` — ${runsSkipped} ${runsSkipped === 1 ? 'run' : 'runs'} skipped` : ''),
+    )
+    setShowChangeType(false)
+    exitSelectMode()
+    router.refresh()
+    fetchActivities(filterType, dateRange, limit)
+  }
+
   const fetchActivities = useCallback(
     async (type: FilterType, range: DateRange, lim: number) => {
       setLoading(true)
@@ -305,12 +368,15 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
   }
 
   const baseActivities = clientFetched ? activities : initialActivities
-  const displayActivities =
+  const sourceFiltered =
     sourceFilter === 'Strava'
       ? baseActivities.filter((a) => a.source === 'strava')
       : sourceFilter === 'Garmin CSV'
         ? baseActivities.filter((a) => a.source === 'garmin_csv')
         : baseActivities
+  const displayActivities = showOtherOnly
+    ? sourceFiltered.filter((a) => a.kind === 'cross' && a.activity_type === 'Other')
+    : sourceFiltered
 
   return (
     <div className="space-y-4">
@@ -390,6 +456,34 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
             )
           })}
         </div>
+
+        {/* Show Other only toggle */}
+        <button
+          type="button"
+          onClick={() => setShowOtherOnly((v) => !v)}
+          className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+            showOtherOnly
+              ? 'border-transparent bg-gray-500/80 text-white'
+              : 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white/80'
+          }`}
+        >
+          Show Other only
+        </button>
+
+        {/* Select mode toggle */}
+        {!isDemoUser && (
+          <button
+            type="button"
+            onClick={() => (isSelectMode ? exitSelectMode() : setIsSelectMode(true))}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              isSelectMode
+                ? 'border-transparent bg-[#C41230] text-white'
+                : 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white/80'
+            }`}
+          >
+            {isSelectMode ? 'Cancel' : 'Select'}
+          </button>
+        )}
       </div>
 
       {/* Count */}
@@ -411,6 +505,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
           const isConfirmingDelete = confirmDeleteId === activity.id
           const isDeleting = deletingId === activity.id
           const isMenuOpen = menuOpenId === activity.id
+          const isSelected = selectedIds.has(selectKey(activity))
 
           return (
             <div key={activity.id} className="relative">
@@ -444,13 +539,19 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                 <button
                   type="button"
                   onClick={() => {
+                    if (isSelectMode) {
+                      toggleSelected(activity)
+                      return
+                    }
                     const path = activity.kind === 'run' ? '/activities/run/' : '/activities/cross/'
                     router.push(`${path}${activity.id}`)
                   }}
-                  className={`w-full cursor-pointer rounded-lg border-l-2 bg-white/[0.03] p-3 text-left transition-colors hover:bg-white/[0.07] ${borderColor}`}
+                  className={`w-full cursor-pointer rounded-lg border-l-2 bg-white/[0.03] p-3 text-left transition-colors hover:bg-white/[0.07] ${borderColor} ${
+                    isSelectMode && isSelected ? 'ring-1 ring-[#C41230]' : ''
+                  }`}
                 >
                   {(() => {
-                    const menuNode = !isDemoUser ? (
+                    const menuNode = !isDemoUser && !isSelectMode ? (
                       <div
                         data-activity-menu={activity.id}
                         className="relative shrink-0"
@@ -492,7 +593,19 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                     ) : null
 
                     return (
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                      <div className="flex items-start gap-3">
+                        {isSelectMode && (
+                          <span
+                            className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border ${
+                              isSelected
+                                ? 'border-[#C41230] bg-[#C41230] text-white'
+                                : 'border-white/25 bg-white/5'
+                            }`}
+                          >
+                            {isSelected && <Check className="size-3.5" />}
+                          </span>
+                        )}
+                        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                         {/* Mobile row 1 / Desktop left cluster: badge + strava (+ date on desktop) + menu (mobile only) */}
                         <div className="flex items-center justify-between gap-2 sm:justify-start">
                           <div className="flex min-w-0 items-center gap-2">
@@ -551,6 +664,7 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
                           </div>
                           <div className="hidden sm:block">{menuNode}</div>
                         </div>
+                        </div>
                       </div>
                     )
                   })()}
@@ -584,6 +698,80 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
               'Load More'
             )}
           </button>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {isSelectMode && !isDemoUser && selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-20 z-40 border-t border-white/10 bg-[#0D1117]/95 px-4 py-3 backdrop-blur md:bottom-0">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+            <span className="text-sm font-medium text-white">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/5"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowChangeType(true)}
+                className="rounded-lg bg-[#C41230] px-4 py-2 text-sm font-medium text-white hover:bg-[#A10F29]"
+              >
+                Change Type
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Type modal */}
+      {showChangeType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#161B22] p-6 shadow-xl">
+            <h2 className="mb-1 text-lg font-semibold text-white">Change Activity Type</h2>
+            <p className="mb-4 text-sm text-white/50">
+              Type change only applies to cross training activities. Any selected runs are skipped.
+            </p>
+            <div className="space-y-1">
+              <label className="text-sm text-white/60">New activity type</label>
+              <select
+                value={newType}
+                onChange={(e) => setNewType(e.target.value as (typeof CROSS_TYPES)[number])}
+                className="flex h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus-visible:border-[#C41230] focus-visible:outline-none"
+              >
+                {CROSS_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {hiddenTypes.includes(t) ? `${t} (hidden)` : t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowChangeType(false)}
+                className="flex-1 rounded-lg border border-white/10 py-2 text-sm text-white/60 hover:border-white/20 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyType}
+                disabled={applyingType}
+                className="flex-1 rounded-lg bg-[#C41230] py-2 text-sm font-medium text-white hover:bg-[#A10F29] disabled:opacity-50"
+              >
+                {applyingType ? (
+                  <Loader2 className="mx-auto size-4 animate-spin" />
+                ) : (
+                  `Apply to ${selectedIds.size} ${selectedIds.size === 1 ? 'activity' : 'activities'}`
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

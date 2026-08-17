@@ -6,6 +6,7 @@ import { Loader2, MoreHorizontal, Zap, Watch, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatPace, formatDuration } from '@/lib/utils/pace'
 import { toast } from '@/lib/hooks/use-toast'
+import { Select } from '@/components/ui/select'
 import { EditRunModal, EditCrossModal, CROSS_TYPES } from './EditActivityModals'
 
 // ---------------------------------------------------------------------------
@@ -738,17 +739,17 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
             </p>
             <div className="space-y-1">
               <label className="text-sm text-white/60">New activity type</label>
-              <select
+              <Select
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as (typeof CROSS_TYPES)[number])}
-                className="flex h-10 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus-visible:border-[#C41230] focus-visible:outline-none"
+                className="h-10"
               >
                 {CROSS_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {hiddenTypes.includes(t) ? `${t} (hidden)` : t}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="mt-6 flex gap-3">
               <button

@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { CROSS_TYPES } from '@/components/history/EditActivityModals'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,9 +29,14 @@ export type GoalRow = {
   goal_type: string
   period: 'week' | 'month' | 'year'
   target_value: number
+  scope: string
+  name: string | null
   is_active: boolean
   created_at: string
 }
+
+// Valid scope values: 'all', 'runs', or a specific cross training activity type.
+const SCOPE_VALUES = ['all', 'runs', ...CROSS_TYPES] as const
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -38,11 +44,15 @@ export type GoalRow = {
 
 const goalSchema = z.object({
   period: z.enum(['week', 'month', 'year']),
+  scope: z.enum(SCOPE_VALUES),
+  name: z.string().optional(),
   target_miles: z.coerce.number().min(0.1, 'Target miles is required'),
 })
 
 const goalEditSchema = z.object({
   period: z.enum(['week', 'month', 'year']),
+  scope: z.enum(SCOPE_VALUES),
+  name: z.string().optional(),
   target_miles: z.coerce.number().min(0.1, 'Target miles is required'),
 })
 
@@ -85,16 +95,47 @@ function getBarColor(pct: number): string {
   return 'bg-[#C41230]'
 }
 
+function scopeLabel(scope: string): string {
+  if (scope === 'all') return 'All Activities'
+  if (scope === 'runs') return 'Runs'
+  return scope
+}
+
+function scopeTagClass(scope: string): string {
+  if (scope === 'all') return 'bg-white/10 text-white/80'
+  if (scope === 'runs') return 'bg-blue-500/15 text-blue-400'
+  return 'bg-green-600/15 text-green-400'
+}
+
+function autoGoalName(period: 'week' | 'month' | 'year', scope: string): string {
+  const p = period === 'week' ? 'Week' : period === 'month' ? 'Month' : 'Year'
+  return `${p} · ${scopeLabel(scope)}`
+}
+
+function goalDisplayName(goal: GoalRow): string {
+  return goal.name && goal.name.trim() ? goal.name.trim() : autoGoalName(goal.period, goal.scope)
+}
+
+// Cross training types visible in the scope dropdown, respecting hidden_activity_types
+// but always keeping `keep` (e.g. the scope a goal already uses) so it never disappears.
+function visibleScopeTypes(hiddenTypes: string[], keep?: string): string[] {
+  return CROSS_TYPES.filter((t) => t === keep || !hiddenTypes.includes(t))
+}
+
 // ---------------------------------------------------------------------------
 // Edit Goal Modal
 // ---------------------------------------------------------------------------
 
 function EditGoalModal({
   goal,
+  activeGoals,
+  hiddenTypes,
   onClose,
   onSaved,
 }: {
   goal: GoalRow
+  activeGoals: GoalRow[]
+  hiddenTypes: string[]
   onClose: () => void
   onSaved: () => void
 }) {
@@ -108,16 +149,34 @@ function EditGoalModal({
     resolver: zodResolver(goalEditSchema),
     defaultValues: {
       period: goal.period,
+      scope: goal.scope as (typeof SCOPE_VALUES)[number],
+      name: goal.name ?? '',
       target_miles: goal.target_value,
     },
   })
 
+  const typeOptions = visibleScopeTypes(hiddenTypes, goal.scope)
+
   async function onSubmit(data: z.infer<typeof goalEditSchema>) {
     setSubmitError(null)
+
+    const conflict = activeGoals.find(
+      (g) => g.id !== goal.id && g.is_active && g.period === data.period && g.scope === data.scope,
+    )
+    if (conflict) {
+      setSubmitError(`You already have an active ${data.period} goal for ${scopeLabel(data.scope)}`)
+      return
+    }
+
     const supabase = createClient()
     const { error } = await supabase
       .from('goals')
-      .update({ period: data.period, target_value: data.target_miles })
+      .update({
+        period: data.period,
+        scope: data.scope,
+        name: data.name && data.name.trim() ? data.name.trim() : null,
+        target_value: data.target_miles,
+      })
       .eq('id', goal.id)
     if (error) {
       setSubmitError(error.message)
@@ -136,6 +195,32 @@ function EditGoalModal({
             <div className="flex h-8 items-center rounded-lg border border-white/10 bg-white/5 px-2.5 text-sm text-white/40">
               Mileage
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="edit-goal-name" className="text-sm text-white/60">
+              Goal Name <span className="text-white/30">(optional)</span>
+            </Label>
+            <Input
+              id="edit-goal-name"
+              type="text"
+              placeholder="e.g. Frisbee Summer Push"
+              className={inputCls}
+              {...register('name')}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="edit-goal-scope" className="text-sm text-white/60">
+              Activity Scope
+            </Label>
+            <Select id="edit-goal-scope" {...register('scope')}>
+              <option value="all">All Activities</option>
+              <option value="runs">Runs Only</option>
+              {typeOptions.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </Select>
           </div>
 
           <div className="space-y-1">
@@ -201,10 +286,12 @@ function EditGoalModal({
 function AddGoalForm({
   userId,
   activeGoals,
+  hiddenTypes,
   onSuccess,
 }: {
   userId: string
   activeGoals: GoalRow[]
+  hiddenTypes: string[]
   onSuccess: () => void
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -218,18 +305,22 @@ function AddGoalForm({
     resolver: zodResolver(goalSchema),
     defaultValues: {
       period: 'week' as 'week' | 'month' | 'year',
+      scope: 'runs' as (typeof SCOPE_VALUES)[number],
+      name: '',
       target_miles: '' as unknown as number,
     },
   })
+
+  const typeOptions = visibleScopeTypes(hiddenTypes)
 
   async function onSubmit(data: z.infer<typeof goalSchema>) {
     setSubmitError(null)
 
     const existing = activeGoals.find(
-      (g) => g.is_active && g.period === data.period,
+      (g) => g.is_active && g.period === data.period && g.scope === data.scope,
     )
     if (existing) {
-      setSubmitError(`You already have an active ${data.period} goal`)
+      setSubmitError(`You already have an active ${data.period} goal for ${scopeLabel(data.scope)}`)
       return
     }
 
@@ -238,6 +329,8 @@ function AddGoalForm({
       user_id: userId,
       goal_type: 'mileage',
       period: data.period,
+      scope: data.scope,
+      name: data.name && data.name.trim() ? data.name.trim() : null,
       target_value: data.target_miles,
       is_active: true,
     })
@@ -258,6 +351,32 @@ function AddGoalForm({
         <div className="flex h-8 items-center rounded-lg border border-white/10 bg-white/5 px-2.5 text-sm text-white/40">
           Mileage
         </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="goal-name" className="text-sm text-white/60">
+          Goal Name <span className="text-white/30">(optional)</span>
+        </Label>
+        <Input
+          id="goal-name"
+          type="text"
+          placeholder="e.g. Frisbee Summer Push"
+          className={inputCls}
+          {...register('name')}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="goal-scope" className="text-sm text-white/60">
+          Activity Scope
+        </Label>
+        <Select id="goal-scope" {...register('scope')}>
+          <option value="all">All Activities</option>
+          <option value="runs">Runs Only</option>
+          {typeOptions.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </Select>
       </div>
 
       <div className="space-y-1">
@@ -320,11 +439,15 @@ function AddGoalForm({
 function GoalCard({
   goal,
   progress,
+  activeGoals,
+  hiddenTypes,
   isDemoUser,
   onRefresh,
 }: {
   goal: GoalRow
   progress: number | null
+  activeGoals: GoalRow[]
+  hiddenTypes: string[]
   isDemoUser: boolean
   onRefresh: () => void
 }) {
@@ -400,6 +523,8 @@ function GoalCard({
       {editOpen && (
         <EditGoalModal
           goal={goal}
+          activeGoals={activeGoals}
+          hiddenTypes={hiddenTypes}
           onClose={() => setEditOpen(false)}
           onSaved={() => {
             setEditOpen(false)
@@ -409,14 +534,19 @@ function GoalCard({
         />
       )}
       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="rounded-md bg-[#C41230]/20 px-2 py-0.5 text-xs font-semibold tracking-wider text-[#C41230]">
-            {periodLabel}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-white/40">
-              {goal.target_value} miles / {goal.period}
-            </span>
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold text-white">{goalDisplayName(goal)}</p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-md bg-[#C41230]/20 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-[#C41230]">
+                {periodLabel}
+              </span>
+              <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${scopeTagClass(goal.scope)}`}>
+                {scopeLabel(goal.scope)}
+              </span>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             {!isDemoUser && goal.is_active && (
               <div className="relative" ref={menuRef}>
                 <button
@@ -495,9 +625,10 @@ interface GoalsClientProps {
   initialGoals: GoalRow[]
   userId: string
   isDemoUser?: boolean
+  hiddenTypes?: string[]
 }
 
-export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsClientProps) {
+export function GoalsClient({ initialGoals, userId, isDemoUser = false, hiddenTypes = [] }: GoalsClientProps) {
   const [goals, setGoals] = useState<GoalRow[]>(initialGoals)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -525,17 +656,40 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
         else if (goal.period === 'month') startDate = getMonthStart()
         else startDate = getYearStart()
 
-        const { data } = await supabase
-          .from('runs')
-          .select('distance_miles')
-          .eq('user_id', userId)
-          .gte('date', startDate)
-          .lte('date', today)
+        const sumMiles = (rows: { distance_miles: number | null }[] | null) =>
+          (rows ?? []).reduce((sum, r) => sum + (r.distance_miles ?? 0), 0)
 
-        const miles = (data ?? []).reduce(
-          (sum, r) => sum + ((r.distance_miles as number | null) ?? 0),
-          0,
-        )
+        let miles = 0
+
+        if (goal.scope === 'runs' || goal.scope === 'all') {
+          const { data } = await supabase
+            .from('runs')
+            .select('distance_miles')
+            .eq('user_id', userId)
+            .gte('date', startDate)
+            .lte('date', today)
+          miles += sumMiles(data as { distance_miles: number | null }[] | null)
+        }
+
+        if (goal.scope === 'all') {
+          const { data } = await supabase
+            .from('cross_training')
+            .select('distance_miles')
+            .eq('user_id', userId)
+            .gte('date', startDate)
+            .lte('date', today)
+          miles += sumMiles(data as { distance_miles: number | null }[] | null)
+        } else if (goal.scope !== 'runs') {
+          const { data } = await supabase
+            .from('cross_training')
+            .select('distance_miles')
+            .eq('user_id', userId)
+            .eq('activity_type', goal.scope)
+            .gte('date', startDate)
+            .lte('date', today)
+          miles += sumMiles(data as { distance_miles: number | null }[] | null)
+        }
+
         newProgress[goal.id] = miles
       }),
     )
@@ -548,7 +702,7 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
     const supabase = createClient()
     const { data } = await supabase
       .from('goals')
-      .select('id, goal_type, period, target_value, is_active, created_at')
+      .select('id, goal_type, period, target_value, scope, name, is_active, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
@@ -559,6 +713,8 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
           goal_type: g.goal_type as string,
           period: g.period as 'week' | 'month' | 'year',
           target_value: g.target_value as number,
+          scope: (g.scope as string | null) ?? 'runs',
+          name: (g.name as string | null) ?? null,
           is_active: g.is_active as boolean,
           created_at: g.created_at as string,
         })),
@@ -588,6 +744,7 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
             <AddGoalForm
               userId={userId}
               activeGoals={activeGoals}
+              hiddenTypes={hiddenTypes}
               onSuccess={() => {
                 setOpen(false)
                 fetchGoals()
@@ -607,6 +764,8 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
                 key={goal.id}
                 goal={goal}
                 progress={progress[goal.id] ?? null}
+                activeGoals={activeGoals}
+                hiddenTypes={hiddenTypes}
                 isDemoUser={isDemoUser}
                 onRefresh={fetchGoals}
               />
@@ -643,6 +802,8 @@ export function GoalsClient({ initialGoals, userId, isDemoUser = false }: GoalsC
                   key={goal.id}
                   goal={goal}
                   progress={null}
+                  activeGoals={activeGoals}
+                  hiddenTypes={hiddenTypes}
                   isDemoUser={isDemoUser}
                   onRefresh={fetchGoals}
                 />

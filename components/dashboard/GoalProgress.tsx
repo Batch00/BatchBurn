@@ -1,6 +1,8 @@
 export interface Goal {
   id: string
   period: 'week' | 'month' | 'year'
+  scope: string
+  name: string
   target_miles: number
   current_miles: number
 }
@@ -9,10 +11,16 @@ interface GoalProgressProps {
   goals: Goal[]
 }
 
-const periodLabels: Record<string, string> = {
-  week: 'Weekly',
-  month: 'Monthly',
-  year: 'Yearly',
+function scopeLabel(scope: string): string {
+  if (scope === 'all') return 'All Activities'
+  if (scope === 'runs') return 'Runs'
+  return scope
+}
+
+function scopeTagClass(scope: string): string {
+  if (scope === 'all') return 'bg-white/10 text-white/80'
+  if (scope === 'runs') return 'bg-blue-500/15 text-blue-400'
+  return 'bg-green-600/15 text-green-400'
 }
 
 function ProgressRing({
@@ -83,11 +91,17 @@ export function GoalProgress({ goals }: GoalProgressProps) {
         {goals.map((goal) => (
           <div key={goal.id} className="flex items-center gap-4">
             <ProgressRing current={goal.current_miles} target={goal.target_miles} />
-            <div>
-              <p className="text-sm font-medium text-white/80">
-                {periodLabels[goal.period] || goal.period} Goal
-              </p>
-              <p className="text-sm text-white/50">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white/80">{goal.name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="rounded bg-[#C41230]/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#C41230]">
+                  {goal.period}
+                </span>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${scopeTagClass(goal.scope)}`}>
+                  {scopeLabel(goal.scope)}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-white/50">
                 {goal.current_miles.toFixed(1)} / {goal.target_miles} mi
               </p>
             </div>

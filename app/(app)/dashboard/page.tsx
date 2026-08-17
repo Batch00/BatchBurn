@@ -79,21 +79,21 @@ export default async function DashboardPage() {
     // WTD cross training
     supabase
       .from('cross_training')
-      .select('distance_miles, duration_seconds')
+      .select('distance_miles, duration_seconds, activity_type')
       .eq('user_id', userId)
       .gte('date', toDateStr(monday))
       .lte('date', toDateStr(now)),
     // MTD cross training
     supabase
       .from('cross_training')
-      .select('distance_miles')
+      .select('distance_miles, activity_type')
       .eq('user_id', userId)
       .gte('date', toDateStr(monthStart))
       .lte('date', toDateStr(now)),
     // YTD cross training
     supabase
       .from('cross_training')
-      .select('distance_miles')
+      .select('distance_miles, activity_type')
       .eq('user_id', userId)
       .gte('date', toDateStr(yearStart))
       .lte('date', toDateStr(now)),
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
     // Active goals — target_value is the column name in schema
     supabase
       .from('goals')
-      .select('id, period, target_value')
+      .select('id, period, target_value, scope, name')
       .eq('user_id', userId)
       .eq('is_active', true),
     // Most recent Garmin CSV import (runs)
@@ -171,6 +171,40 @@ export default async function DashboardPage() {
   const activeWtdMiles = wtdMiles + wtdCrossMiles
   const activeMtdMiles = mtdMiles + mtdCrossMiles
   const activeYtdMiles = ytdMiles + ytdCrossMiles
+
+  // Cross training miles grouped by activity_type, per period — for scoped goals
+  function sumCrossByType(
+    rows: { distance_miles: number | null; activity_type: string | null }[] | null,
+  ): Record<string, number> {
+    const map: Record<string, number> = {}
+    for (const c of rows ?? []) {
+      const t = c.activity_type ?? ''
+      map[t] = (map[t] ?? 0) + (c.distance_miles ?? 0)
+    }
+    return map
+  }
+  const wtdCrossByType = sumCrossByType(wtdCross ?? null)
+  const mtdCrossByType = sumCrossByType(mtdCross ?? null)
+  const ytdCrossByType = sumCrossByType(ytdCross ?? null)
+
+  // Resolve a goal's current progress based on its scope + period
+  function goalCurrentMiles(period: string, scope: string): number {
+    const runsMiles = period === 'week' ? wtdMiles : period === 'month' ? mtdMiles : ytdMiles
+    const crossTotal =
+      period === 'week' ? wtdCrossMiles : period === 'month' ? mtdCrossMiles : ytdCrossMiles
+    const crossByType =
+      period === 'week' ? wtdCrossByType : period === 'month' ? mtdCrossByType : ytdCrossByType
+    if (scope === 'runs') return runsMiles
+    if (scope === 'all') return runsMiles + crossTotal
+    return crossByType[scope] ?? 0
+  }
+
+  function goalName(name: string | null, period: string, scope: string): string {
+    if (name && name.trim()) return name.trim()
+    const p = period === 'week' ? 'Week' : period === 'month' ? 'Month' : 'Year'
+    const s = scope === 'all' ? 'All Activities' : scope === 'runs' ? 'Runs' : scope
+    return `${p} · ${s}`
+  }
 
   // WTD combined duration for active-mode "Total Time" card
   const wtdRunDuration = (wtdRuns ?? []).reduce((s, r) => s + (r.duration_seconds ?? 0), 0)
@@ -286,15 +320,18 @@ export default async function DashboardPage() {
                   (sum, r) => sum + (r.distance_miles ?? 0), 0)
               : 0) + ((s.initial_miles as number | null) ?? 0),
         })).sort((a, b) => b.current_miles - a.current_miles)} />
-        <GoalProgress goals={(goals ?? []).map((g) => ({
-          id: g.id as string,
-          period: g.period as 'week' | 'month' | 'year',
-          target_miles: g.target_value as number,
-          current_miles:
-            g.period === 'week' ? wtdMiles :
-            g.period === 'month' ? mtdMiles :
-            ytdMiles,
-        }))} />
+        <GoalProgress goals={(goals ?? []).map((g) => {
+          const period = g.period as 'week' | 'month' | 'year'
+          const scope = (g.scope as string | null) ?? 'runs'
+          return {
+            id: g.id as string,
+            period,
+            scope,
+            name: goalName(g.name as string | null, period, scope),
+            target_miles: g.target_value as number,
+            current_miles: goalCurrentMiles(period, scope),
+          }
+        })} />
       </div>
     </div>
   )

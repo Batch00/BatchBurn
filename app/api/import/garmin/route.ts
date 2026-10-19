@@ -120,10 +120,12 @@ export async function POST(req: NextRequest) {
 
   // Pre-fetch existing rows once for in-memory dedup (covers re-imports and
   // intra-file duplicates as we append inserted rows to these lists).
-  const [{ data: existingRuns }, { data: existingCross }] = await Promise.all([
+  const [{ data: existingRuns }, { data: existingCross }, { data: profile }] = await Promise.all([
     supabase.from('runs').select('date, distance_miles').eq('user_id', userId),
     supabase.from('cross_training').select('date, distance_miles, activity_type').eq('user_id', userId),
+    supabase.from('profiles').select('primary_shoe_id').eq('user_id', userId).maybeSingle(),
   ])
+  const primaryShoeId = (profile?.primary_shoe_id as string | null) ?? null
   const runsSeen: ExistingRow[] = (existingRuns ?? []) as ExistingRow[]
   const crossSeen: ExistingRow[] = (existingCross ?? []) as ExistingRow[]
 
@@ -181,6 +183,7 @@ export async function POST(req: NextRequest) {
       record = {
         ...base,
         run_type: 'Easy',
+        ...(primaryShoeId ? { shoe_id: primaryShoeId } : {}),
         pace_per_mile_seconds:
           distanceMiles != null && distanceMiles > 0 && durationSeconds != null
             ? Math.round(durationSeconds / distanceMiles)

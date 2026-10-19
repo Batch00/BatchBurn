@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Papa from 'papaparse'
+import { createHash, timingSafeEqual } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Map Garmin's "Activity Type" to a target table + activity/run type.
 const RUN_TYPES = new Set(['Running', 'Treadmill Running', 'Trail Running'])
@@ -72,16 +74,36 @@ function isDuplicate(
   })
 }
 
-export async function POST(req: NextRequest) {
+// Constant-time key check. Hashing first gives equal-length buffers, which
+// timingSafeEqual requires, without leaking the expected key's length.
+function isValidSyncKey(provided: string | null): boolean {
+  const expected = process.env.GARMIN_SYNC_API_KEY
+  if (!provided || !expected) return false
+  const a = createHash('sha256').update(provided).digest()
+  const b = createHash('sha256').update(expected).digest()
+  return timingSafeEqual(a, b)
+}
+
+// Resolve the caller: automated sync (API key → admin client acting as
+// GARMIN_SYNC_USER_ID) or the logged-in user's session (Settings upload).
+async function resolveCaller(req: NextRequest) {
+  const syncUserId = process.env.GARMIN_SYNC_USER_ID
+  if (syncUserId && isValidSyncKey(req.headers.get('x-batchburn-sync-key'))) {
+    return { supabase: createAdminClient(), userId: syncUserId }
+  }
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  return user ? { supabase, userId: user.id } : null
+}
 
-  if (!user) {
+export async function POST(req: NextRequest) {
+  const caller = await resolveCaller(req)
+  if (!caller) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const userId = user.id
+  const { supabase, userId } = caller
 
   const formData = await req.formData()
   const file = formData.get('file')

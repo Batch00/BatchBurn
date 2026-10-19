@@ -133,6 +133,21 @@ RLS enabled on every table. All tables have id (uuid) + user_id + created_at.
 
 ---
 
+## Environment Variables (names only)
+Vercel / .env.local:
+- NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+- NEXT_PUBLIC_APP_URL
+- STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_WEBHOOK_VERIFY_TOKEN
+- IMPORT_SECRET
+- GARMIN_SYNC_API_KEY — shared secret for x-batchburn-sync-key header on 
+  /api/import/garmin (automated Garmin sync)
+- GARMIN_SYNC_USER_ID — user the automated Garmin sync imports as
+
+scripts/garmin-sync/.env (local only, gitignored):
+- BATCHBURN_URL, GARMIN_SYNC_API_KEY, SYNC_INTERVAL_DAYS
+
+---
+
 ## Auth & Access Control
 - Supabase Auth (email/password), invite-only
 - Demo: demo@batchburn.app — read-only, shows amber banner

@@ -23,3 +23,21 @@ Next.js 15 · Supabase · Tailwind CSS · shadcn/ui · Recharts · Vercel
 
 ## Dev
 See CLAUDE.md for full technical documentation.
+
+## Garmin Auto-Sync
+A Windows Task Scheduler job exports the activity CSV from Garmin Connect 
+(via Playwright) and uploads it to `/api/import/garmin` at log on — but only 
+if `SYNC_INTERVAL_DAYS` (default 2) have passed since the last successful sync.
+
+1. Copy `scripts/garmin-sync/.env.example` to `scripts/garmin-sync/.env` and 
+   fill in `BATCHBURN_URL`, `GARMIN_SYNC_API_KEY` (must match Vercel), and 
+   `SYNC_INTERVAL_DAYS`
+2. `node scripts/garmin-sync/setup-login.mjs` — log in to Garmin, check 
+   "Remember me", then close the window
+3. `node scripts/garmin-sync/sync.mjs --force` — test run (bypasses the interval)
+4. In PowerShell: `powershell -ExecutionPolicy Bypass -File scripts\garmin-sync\register-task.ps1` 
+   (use an Administrator PowerShell if it reports "Access is denied"). 
+   Remove with `unregister-task.ps1`.
+5. Logs: `%LOCALAPPDATA%\BatchBurn\sync.log`. Exports are kept in 
+   `%LOCALAPPDATA%\BatchBurn\exports` (10 most recent). If the log says 
+   `GARMIN LOGIN REQUIRED`, re-run step 2.

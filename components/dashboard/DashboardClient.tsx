@@ -72,9 +72,9 @@ export function DashboardClient({
   const [filter, setFilter] = useState<FilterMode>('All')
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
 
-  // Garmin sync reminder — show when overdue (>=7 days) or never imported,
+  // Garmin sync reminder — show when overdue (>=5 days) or never imported,
   // unless dismissed this session.
-  const garminOverdue = daysSinceGarminImport === null || daysSinceGarminImport >= 7
+  const garminOverdue = daysSinceGarminImport === null || daysSinceGarminImport >= 5
   const [garminBannerDismissed, setGarminBannerDismissed] = useState(false)
 
   useEffect(() => {

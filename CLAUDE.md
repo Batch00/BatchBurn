@@ -12,9 +12,9 @@
 
 ## Project Overview
 BatchBurn is a personal workout tracking and analytics web app. It supports 
-manual activity logging (runs and cross training), Strava OAuth sync with 
-automatic Garmin passthrough, shoe mileage tracking with primary shoe 
-auto-assignment, race logging with PR detection, goal setting, and rich 
+manual activity logging (runs and cross training), Garmin CSV import 
+(manual upload + automated local sync), shoe mileage tracking with primary 
+shoe auto-assignment, race logging with PR detection, goal setting, and rich 
 analytics dashboards. Built for mobile-first use with a dark athletic design.
 
 Deployed at: https://batchburn.batch-apps.com
@@ -51,10 +51,12 @@ All three apps share the same Supabase project.
 /app/(app)/shoes         → shoe tracker, primary shoe, mileage ordering, 
                            edit/delete
 /app/(app)/goals         → mileage goals with progress rings, edit/delete
-/app/(app)/settings      → profile, Strava connect/disconnect/sync, 
-                           primary shoe, danger zone
+/app/(app)/settings      → profile, Garmin CSV upload, Strava-unavailable
+                           notice, primary shoe, danger zone
 /app/(app)/admin         → invite management (carsonb1723@gmail.com only)
 /app/api/import          → one-time historical data import endpoint
+/app/api/import/garmin   → Garmin CSV import (session auth or 
+                           x-batchburn-sync-key header)
 /app/api/strava/callback → OAuth callback, saves tokens, redirects to settings
 /app/api/strava/webhook  → Strava webhook: GET verification + POST new activity
 /app/api/strava/import   → client-triggered import endpoint (protected)
@@ -82,6 +84,7 @@ All three apps share the same Supabase project.
 /middleware.ts           → protects app routes, allows /api/strava/* and 
                            /auth/callback through
 /supabase/migrations     → schema migration SQL files
+/scripts/garmin-sync     → automated Garmin sync (Playwright + Task Scheduler)
 /public/manifest.json    → PWA manifest (theme: #C41230)
 /public/icons            → PWA icons (192, 512) — crimson flame
 /public/favicon.ico      → crimson flame favicon
@@ -130,6 +133,10 @@ RLS enabled on every table. All tables have id (uuid) + user_id + created_at.
 - **Strava import dedup**: Match by strava_activity_id first; if not found,
   match by same date + distance within 0.1 miles to update existing 
   manual runs instead of duplicating.
+- **Adding an activity type**: Two CHECK constraints must BOTH be updated 
+  in the migration — cross_training.activity_type 
+  (cross_training_activity_type_check) and goals.scope (goals_scope_check, 
+  auto-named from the inline CHECK in add_goal_scope.sql).
 
 ---
 
@@ -158,16 +165,38 @@ scripts/garmin-sync/.env (local only, gitignored):
 
 ---
 
-## Strava Integration
-- OAuth 2.0: webhook subscription active
+## Garmin Integration (primary data source)
+- Manual: CSV upload in Settings → POST /api/import/garmin (session auth)
+- Automated: scripts/garmin-sync (Playwright + Windows Task Scheduler) 
+  exports the CSV from Garmin Connect using a dedicated browser profile at 
+  %LOCALAPPDATA%\BatchBurn\garmin-profile and uploads it with the 
+  x-batchburn-sync-key header
+  - Triggers: log on, workstation unlock (2-min delay), daily 6 PM local
+  - Self-throttled: sync.mjs skips unless SYNC_INTERVAL_DAYS have passed 
+    since the last success (--force bypasses)
+  - Logs: %LOCALAPPDATA%\BatchBurn\sync.log
+- Import endpoint auth: session cookie, OR x-batchburn-sync-key matching 
+  GARMIN_SYNC_API_KEY (constant-time compare) → acts as GARMIN_SYNC_USER_ID 
+  via the admin client
+- Dedup: same date + distance within 0.15 mi; distanceless activities 
+  match on date + activity type
+- Primary shoe: profiles.primary_shoe_id auto-assigned to imported runs 
+  (not cross training)
+- Dashboard banner shows when the last Garmin import is 5+ days old
+
+---
+
+## Strava Integration (DISABLED)
+- Disabled: Strava's API now requires a paid subscription. Code is kept 
+  (lib/strava, /api/strava/*) but UI entry points are removed; Settings 
+  shows an "unavailable" notice. Do NOT re-enable without asking.
+- OAuth 2.0: webhook subscription
 - Callback: /api/strava/callback — saves tokens, redirects to settings
 - Import: /api/strava/import — client-triggered, protected route
 - Webhook: /api/strava/webhook — real-time new activity push from Strava
 - Token refresh: checked before every API call, upserted to profiles
 - Primary shoe: fetched from profiles.primary_shoe_id, auto-assigned 
   to Strava runs on import and webhook
-- Garmin activities flow through Strava automatically — no separate 
-  Garmin integration needed
 
 ---
 

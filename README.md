@@ -26,7 +26,8 @@ See CLAUDE.md for full technical documentation.
 
 ## Garmin Auto-Sync
 A Windows Task Scheduler job exports the activity CSV from Garmin Connect 
-(via Playwright) and uploads it to `/api/import/garmin` at log on — but only 
+(via Playwright) and uploads it to `/api/import/garmin` at log on, unlock, and
+daily at 6 PM — but only 
 if `SYNC_INTERVAL_DAYS` (default 2) have passed since the last successful sync.
 
 1. Copy `scripts/garmin-sync/.env.example` to `scripts/garmin-sync/.env` and 

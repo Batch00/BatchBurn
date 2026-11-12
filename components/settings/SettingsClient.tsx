@@ -72,8 +72,6 @@ interface SettingsClientProps {
   email: string
   displayName: string
   isDemoUser?: boolean
-  stravaAthleteId?: number | null
-  stravaStatus?: string | null
   hiddenTypes?: string[]
 }
 
@@ -299,8 +297,7 @@ export function SettingsClient({
         <div className="space-y-1">
           <p className="text-sm font-medium text-white">Strava</p>
           <p className="text-xs text-white/40">
-            Strava sync is currently unavailable — Strava now requires a paid API
-            subscription. You can still log activities manually below.
+            Strava sync has been retired. Past Strava activities remain in your history.
           </p>
         </div>
       </Section>

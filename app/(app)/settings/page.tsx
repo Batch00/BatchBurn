@@ -1,11 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { SettingsClient } from '@/components/settings/SettingsClient'
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ strava?: string }>
-}) {
+export default async function SettingsPage() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -14,17 +10,13 @@ export default async function SettingsPage({
   const email = user!.email ?? ''
   const isDemoUser = email === 'demo@batchburn.app'
 
-  const params = await searchParams
-  const stravaStatus = params.strava ?? null
-
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, strava_athlete_id, hidden_activity_types')
+    .select('display_name, hidden_activity_types')
     .eq('user_id', userId)
     .single()
 
   const displayName = (profileData?.display_name as string | null) ?? ''
-  const stravaAthleteId = (profileData?.strava_athlete_id as number | null) ?? null
   const hiddenTypes = (profileData?.hidden_activity_types as string[] | null) ?? []
 
   return (
@@ -35,8 +27,6 @@ export default async function SettingsPage({
         email={email}
         displayName={displayName}
         isDemoUser={isDemoUser}
-        stravaAthleteId={stravaAthleteId}
-        stravaStatus={stravaStatus}
         hiddenTypes={hiddenTypes}
       />
     </div>

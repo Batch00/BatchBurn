@@ -24,7 +24,7 @@ All three apps share the same Supabase project.
 ---
 
 ## Tech Stack
-- **Framework**: Next.js 15.5.14 (App Router, TypeScript) — pinned to 15.x, 
+- **Framework**: Next.js 15.5.29 (App Router, TypeScript), pinned to 15.x, 
   do NOT upgrade to 16 (known /_global-error prerender bug)
 - **Database & Auth**: Supabase (PostgreSQL, RLS, Edge Functions) — shared 
   project with BatchFlow/BatchFolio
@@ -37,8 +37,7 @@ All three apps share the same Supabase project.
 ---
 
 ## App Structure
-/app/(auth)/login        → login page with demo mode and invite-only notice
-/app/(auth)/signup       → invite-code gated signup
+/app/(auth)/login        → login page with demo mode and request-access notice
 /app/(auth)/layout.tsx   → centered dark auth layout
 /app/(app)/dashboard     → KPI cards (runs only), weekly chart, activity feed,
                            shoe health widget, goal progress rings
@@ -51,15 +50,10 @@ All three apps share the same Supabase project.
 /app/(app)/shoes         → shoe tracker, primary shoe, mileage ordering, 
                            edit/delete
 /app/(app)/goals         → mileage goals with progress rings, edit/delete
-/app/(app)/settings      → profile, Garmin CSV upload, Strava-unavailable
+/app/(app)/settings      → profile, Garmin CSV upload, Strava-retired
                            notice, primary shoe, danger zone
-/app/(app)/admin         → invite management (carsonb1723@gmail.com only)
-/app/api/import          → one-time historical data import endpoint
 /app/api/import/garmin   → Garmin CSV import (session auth or 
                            x-batchburn-sync-key header)
-/app/api/strava/callback → OAuth callback, saves tokens, redirects to settings
-/app/api/strava/webhook  → Strava webhook: GET verification + POST new activity
-/app/api/strava/import   → client-triggered import endpoint (protected)
 /app/auth/callback       → Supabase PKCE callback
 /components/ui           → shadcn base components
 /components/charts       → Recharts wrappers
@@ -73,15 +67,9 @@ All three apps share the same Supabase project.
 /lib/supabase/client.ts  → browser client (schema: batchburn)
 /lib/supabase/server.ts  → server client (schema: batchburn)
 /lib/supabase/admin.ts   → service role client, bypasses RLS, server only
-/lib/strava/config.ts    → Strava OAuth config constants
-/lib/strava/token.ts     → getValidToken(), saveStravaTokens() with upsert
-/lib/strava/mapper.ts    → maps Strava activity types to BatchBurn schema,
-                           accepts optional primaryShoeId
-/lib/strava/import.ts    → importStravaHistory(), dedup by strava_activity_id,
-                           updates existing manual runs with strava_activity_id
 /lib/actions.ts          → revalidateAll() server action
 /lib/utils/pace.ts       → formatPace(seconds), formatDuration(seconds)
-/middleware.ts           → protects app routes, allows /api/strava/* and 
+/middleware.ts           → protects app routes, allows /login and 
                            /auth/callback through
 /supabase/migrations     → schema migration SQL files
 /scripts/garmin-sync     → automated Garmin sync (Playwright + Task Scheduler)
@@ -130,9 +118,6 @@ RLS enabled on every table. All tables have id (uuid) + user_id + created_at.
   column rejects floats.
 - **Server actions after mutations**: Always call revalidateAll() from 
   lib/actions.ts after any database write to refresh server components.
-- **Strava import dedup**: Match by strava_activity_id first; if not found,
-  match by same date + distance within 0.1 miles to update existing 
-  manual runs instead of duplicating.
 - **Adding an activity type**: Two CHECK constraints must BOTH be updated 
   in the migration — cross_training.activity_type 
   (cross_training_activity_type_check) and goals.scope (goals_scope_check, 
@@ -143,9 +128,6 @@ RLS enabled on every table. All tables have id (uuid) + user_id + created_at.
 ## Environment Variables (names only)
 Vercel / .env.local:
 - NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-- NEXT_PUBLIC_APP_URL
-- STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, STRAVA_WEBHOOK_VERIFY_TOKEN
-- IMPORT_SECRET
 - GARMIN_SYNC_API_KEY — shared secret for x-batchburn-sync-key header on 
   /api/import/garmin (automated Garmin sync)
 - GARMIN_SYNC_USER_ID — user the automated Garmin sync imports as
@@ -156,12 +138,11 @@ scripts/garmin-sync/.env (local only, gitignored):
 ---
 
 ## Auth & Access Control
-- Supabase Auth (email/password), invite-only
+- Supabase Auth (email/password), no self-signup; access is by request at 
+  batch-apps.com
 - Demo: demo@batchburn.app — read-only, shows amber banner
 - Demo restrictions: no log, no edit/delete, no add, no settings changes
-- Admin page (/admin) gated to carsonb1723@gmail.com
-- Middleware allows /api/strava/webhook, /api/strava/callback, 
-  /auth/callback through without auth
+- Middleware allows /login and /auth/callback through without auth
 
 ---
 
@@ -186,17 +167,14 @@ scripts/garmin-sync/.env (local only, gitignored):
 
 ---
 
-## Strava Integration (DISABLED)
-- Disabled: Strava's API now requires a paid subscription. Code is kept 
-  (lib/strava, /api/strava/*) but UI entry points are removed; Settings 
-  shows an "unavailable" notice. Do NOT re-enable without asking.
-- OAuth 2.0: webhook subscription
-- Callback: /api/strava/callback — saves tokens, redirects to settings
-- Import: /api/strava/import — client-triggered, protected route
-- Webhook: /api/strava/webhook — real-time new activity push from Strava
-- Token refresh: checked before every API call, upserted to profiles
-- Primary shoe: fetched from profiles.primary_shoe_id, auto-assigned 
-  to Strava runs on import and webhook
+## Strava Integration (RETIRED)
+- Retired: Strava's API now requires a paid subscription. The Strava routes 
+  and lib/strava were deleted; Settings shows a "retired" notice. Do NOT 
+  re-enable without asking.
+- Past activities keep source = 'strava' and strava_activity_id; History 
+  keeps the Strava source filter and "Synced from Strava" badges
+- profiles keeps its strava_* columns; supabase/manual/retire_strava_tokens.sql 
+  clears the stored tokens
 
 ---
 

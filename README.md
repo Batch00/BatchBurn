@@ -9,13 +9,13 @@ performance trends — all from a mobile-first dark athletic interface.
 
 ## Features
 - Log runs and cross training with auto-calculated pace
-- Strava OAuth sync — Garmin activities import automatically
+- Garmin CSV import, by manual upload or automated local sync
 - Dashboard: WTD/MTD/YTD KPIs, weekly chart, activity feed
 - Analytics: pace trend, mileage by type, personal bests
 - Shoe tracker with mileage, price/mile, primary shoe auto-assign
 - Race log with automatic PR detection
 - Weekly/monthly/yearly mileage goals
-- Invite-only with demo account
+- Access by request at batch-apps.com, with a read-only demo account
 - PWA — installable on iOS and Android
 
 ## Stack

@@ -43,3 +43,6 @@ next-env.d.ts
 # garmin auto-sync config
 scripts/garmin-sync/.env
 !scripts/garmin-sync/.env.example
+
+# supabase cli local state
+supabase/.temp/

@@ -12,6 +12,14 @@ const SHOE_IDS = {
   clifton: '33333333-3333-4333-8333-333333333333',
 } as const
 
+// Strength plan routines. weekdays are ISO days (1 = Monday, 7 = Sunday).
+const ROUTINES = [
+  { id: 'a1111111-1111-4111-8111-111111111111', name: 'Upper Body', activity_type: 'Strength', default_minutes: 45, weekdays: [1] },
+  { id: 'a2222222-2222-4222-8222-222222222222', name: 'Lower Body', activity_type: 'Strength', default_minutes: 45, weekdays: [3] },
+  { id: 'a3333333-3333-4333-8333-333333333333', name: 'Full Body', activity_type: 'Strength', default_minutes: 45, weekdays: [5] },
+  { id: 'a4444444-4444-4444-8444-444444444444', name: 'Stretching', activity_type: 'Stretching', default_minutes: 10, weekdays: [1, 3, 5] },
+]
+
 type RunType = 'Easy' | 'Tempo' | 'Long' | 'Fartlek' | 'Hill' | 'Interval'
 
 // Deterministic-ish PRNG seeded by date so repeat runs the same day are stable
@@ -33,6 +41,19 @@ function todayIso(): string {
 function daysAgo(n: number): string {
   const d = new Date()
   d.setUTCDate(d.getUTCDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+// Sunday of the current week, or of an earlier week (plan weeks run Sunday to Saturday)
+function weekStartIso(weeksBack: number): string {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay() - 7 * weeksBack)
+  return d.toISOString().slice(0, 10)
+}
+
+function addDaysIso(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + n)
   return d.toISOString().slice(0, 10)
 }
 
@@ -147,6 +168,50 @@ function generateCrossTraining(): CrossInsert[] {
   return sessions
 }
 
+// Plan sessions for this week and last week. Days before today are done and
+// linked to a matching activity; today and later stay planned.
+function generatePlan() {
+  const today = todayIso()
+  const planCross: (CrossInsert & { id: string })[] = []
+  const sessions = []
+  for (const weekStart of [weekStartIso(0), weekStartIso(1)]) {
+    for (const r of ROUTINES) {
+      for (const wd of r.weekdays) {
+        const date = addDaysIso(weekStart, wd % 7)
+        const done = date < today
+        const crossId = done ? crypto.randomUUID() : null
+        if (crossId) {
+          planCross.push({
+            id: crossId,
+            user_id: DEMO_USER_ID,
+            date,
+            activity_type: r.activity_type,
+            duration_seconds: r.default_minutes * 60,
+            distance_miles: null,
+            distance_km: null,
+            steps: null,
+            source: 'manual',
+            notes: r.name,
+          })
+        }
+        sessions.push({
+          user_id: DEMO_USER_ID,
+          routine_id: r.id,
+          routine_name: r.name,
+          activity_type: r.activity_type,
+          week_start: weekStart,
+          slot_weekday: wd,
+          date,
+          minutes: r.default_minutes,
+          status: done ? 'done' : 'planned',
+          cross_training_id: crossId,
+        })
+      }
+    }
+  }
+  return { planCross, sessions }
+}
+
 Deno.serve(async (req) => {
   // Bearer token check — only the cron job (or operator with the secret) can call this
   const expected = Deno.env.get('CRON_SECRET')
@@ -174,7 +239,7 @@ Deno.serve(async (req) => {
   })
 
   // 1. Wipe — profile row is intentionally preserved
-  const tables = ['runs', 'cross_training', 'races', 'goals', 'shoes'] as const
+  const tables = ['planned_sessions', 'routines', 'runs', 'cross_training', 'races', 'goals', 'shoes'] as const
   for (const t of tables) {
     const { error } = await supabase.from(t).delete().eq('user_id', DEMO_USER_ID)
     if (error) {
@@ -314,6 +379,29 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 8. Re-seed the strength plan: routines, then done activities, then sessions
+  const routines = ROUTINES.map((r, i) => ({
+    ...r,
+    user_id: DEMO_USER_ID,
+    is_active: true,
+    sort_order: i,
+  }))
+  const { planCross, sessions } = generatePlan()
+  for (const [table, rows] of [
+    ['routines', routines],
+    ['cross_training', planCross],
+    ['planned_sessions', sessions],
+  ] as const) {
+    if (rows.length === 0) continue
+    const { error } = await supabase.from(table).insert(rows)
+    if (error) {
+      return new Response(JSON.stringify({ error: `plan ${table} insert: ${error.message}` }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+  }
+
   return new Response(
     JSON.stringify({
       success: true,
@@ -323,6 +411,8 @@ Deno.serve(async (req) => {
       races_created: races.length,
       goals_created: goals.length,
       shoes_created: shoes.length,
+      routines_created: routines.length,
+      plan_sessions_created: sessions.length,
     }),
     { headers: { 'content-type': 'application/json' } },
   )

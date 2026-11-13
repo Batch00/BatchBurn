@@ -39,8 +39,8 @@ All three apps share the same Supabase project.
 ## App Structure
 /app/(auth)/login        → login page with demo mode and request-access notice
 /app/(auth)/layout.tsx   → centered dark auth layout
-/app/(app)/dashboard     → KPI cards (runs only), weekly chart, activity feed,
-                           shoe health widget, goal progress rings
+/app/(app)/dashboard     → plan week card, KPI cards (runs only), weekly chart,
+                           activity feed, shoe health widget, goal progress rings
 /app/(app)/log           → log run + cross training forms (demo: read-only)
 /app/(app)/history       → filterable unified activity list, edit/delete, 
                            Strava source filter
@@ -50,6 +50,8 @@ All three apps share the same Supabase project.
 /app/(app)/shoes         → shoe tracker, primary shoe, mileage ordering, 
                            edit/delete
 /app/(app)/goals         → mileage goals with progress rings, edit/delete
+/app/(app)/plan          → strength plan: week view (confirm, move, skip) and
+                           routine management
 /app/(app)/settings      → profile, Garmin CSV upload, Strava-retired
                            notice, primary shoe, danger zone
 /app/api/import/garmin   → Garmin CSV import (session auth or 
@@ -62,6 +64,8 @@ All three apps share the same Supabase project.
                            ShoeHealthWidget, GoalProgress, WeeklyMileageChart
 /components/analytics    → AnalyticsClient and chart components
 /components/history      → HistoryClient
+/components/plan         → WeekPlan (also the dashboard week card),
+                           RoutinesManager, PlanClient
 /components/settings     → SettingsClient
 /components/shoes        → ShoesClient
 /lib/supabase/client.ts  → browser client (schema: batchburn)
@@ -100,6 +104,10 @@ Tables:
     is_active, notes)
 - goals (goal_type, period, target_value, target_date, is_active)
 - invites (code, created_by, used_by, used_at)
+- routines (name, default_minutes, activity_type, weekdays, is_active,
+    sort_order)
+- planned_sessions (routine_id, routine_name, activity_type, week_start,
+    slot_weekday, date, minutes, status, cross_training_id)
 
 RLS enabled on every table. All tables have id (uuid) + user_id + created_at.
 
@@ -142,6 +150,8 @@ scripts/garmin-sync/.env (local only, gitignored):
   batch-apps.com
 - Demo: demo@batchburn.app — read-only, shows amber banner
 - Demo restrictions: no log, no edit/delete, no add, no settings changes
+- Demo data, including plan routines and sessions, is wiped and re-seeded
+  nightly by supabase/functions/reset-demo-batchburn
 - Middleware allows /login and /auth/callback through without auth
 
 ---
@@ -164,6 +174,35 @@ scripts/garmin-sync/.env (local only, gitignored):
 - Primary shoe: profiles.primary_shoe_id auto-assigned to imported runs 
   (not cross training)
 - Dashboard banner shows when the last Garmin import is 5+ days old
+
+---
+
+## Strength Plan
+- Purpose: record workouts that are not tracked on the watch (lifting,
+  stretching). A routine is a name, typical minutes, an activity type and
+  default weekdays. No exercises, sets or reps.
+- Plan weeks run Sunday to Saturday. This applies to the plan only: KPIs,
+  goals and charts still use Monday weeks. routines.weekdays and
+  planned_sessions.slot_weekday are ISO days (1 = Monday, 7 = Sunday).
+- Sessions are created in the browser when the plan loads, for the current
+  and previous week, with an upsert that ignores conflicts on
+  (user_id, routine_id, week_start, slot_weekday). There is no scheduled job.
+- Nothing is logged automatically. Confirming a session inserts one
+  cross_training row (the session's activity type, source = 'manual', routine
+  name as the note) and links it through planned_sessions.cross_training_id.
+  If an unclaimed garmin_csv row of the same type exists on that date, the
+  session links to it instead of inserting.
+- Undo deletes only rows with source = 'manual'. A linked Garmin row is just
+  unlinked. A done session whose activity was deleted shows as planned again.
+- Only the current and previous week can be edited. Older weeks are read
+  only, and their unconfirmed sessions show as missed.
+- Generated sessions can be skipped; sessions added by hand can be removed.
+  Editing a routine's days deletes its unmoved, still-planned sessions on the
+  removed days.
+- Work out "today" and the week start in the browser's local time (see
+  currentSunday() in WeekPlan.tsx). Do not use toISOString() for this.
+- The demo account never writes; its plan data comes from the nightly reset.
+- Logged runs and cross training show on the week view as read-only chips.
 
 ---
 
@@ -209,7 +248,9 @@ scripts/garmin-sync/.env (local only, gitignored):
 - git push to main → Vercel auto-deploys
 - Database changes: SQL editor in Supabase, save as .sql in /supabase/migrations
 - Never alter tables in Supabase dashboard table editor directly
-- Always push to main branch — never create feature branches
+- Feature work goes on a branch and is tested on its Vercel preview before
+  merging to main
+- npm run lint must pass: lint errors fail the Vercel build
 
 ---
 

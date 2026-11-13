@@ -6,6 +6,7 @@ import { ShoeHealthWidget } from '@/components/dashboard/ShoeHealthWidget'
 import { GoalProgress } from '@/components/dashboard/GoalProgress'
 import { type Activity } from '@/components/dashboard/ActivityFeed'
 import { RefreshButton } from '@/components/ui/RefreshButton'
+import { WeekPlan } from '@/components/plan/WeekPlan'
 
 function getMonday(d: Date): Date {
   const date = new Date(d)
@@ -290,6 +291,9 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
         <RefreshButton />
       </div>
+
+      {/* Strength plan for this week */}
+      <WeekPlan userId={userId} isDemoUser={isDemoUser} variant="dashboard" />
 
       {/* KPI toggle + cards + filter chips + Chart + Activity Feed (client-side state) */}
       <DashboardClient

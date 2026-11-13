@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   Clock,
   Flame,
+  CalendarCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/races', label: 'Races', icon: Trophy },
   { href: '/shoes', label: 'Shoes', icon: Footprints },
   { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/plan', label: 'Plan', icon: CalendarCheck },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -44,6 +46,7 @@ const moreSheetItems = [
   { href: '/shoes', label: 'Shoes', icon: Footprints },
   { href: '/races', label: 'Races', icon: Trophy },
   { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/plan', label: 'Plan', icon: CalendarCheck },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

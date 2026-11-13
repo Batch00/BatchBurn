@@ -483,36 +483,32 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">
       {/* Header */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        {variant === 'dashboard' ? (
-          <h3 className="text-xs uppercase tracking-widest text-white/40">This week</h3>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Previous week"
-              onClick={() => setWeekOffset((o) => o + 1)}
-              className="rounded-md p-1 text-white/50 hover:bg-white/5 hover:text-white/80"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <h3 className="text-sm font-medium text-white">
-              {weekOffset === 0
-                ? 'This week'
-                : weekOffset === 1
-                  ? 'Last week'
-                  : `${shortDate(weekStart)} to ${shortDate(weekEnd)}`}
-            </h3>
-            <button
-              type="button"
-              aria-label="Next week"
-              disabled={weekOffset === 0}
-              onClick={() => setWeekOffset((o) => o - 1)}
-              className="rounded-md p-1 text-white/50 hover:bg-white/5 hover:text-white/80 disabled:opacity-30"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Previous week"
+            onClick={() => setWeekOffset((o) => o + 1)}
+            className="rounded-md p-1 text-white/50 hover:bg-white/5 hover:text-white/80"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <h3 className="text-sm font-medium text-white">
+            {weekOffset === 0
+              ? 'This week'
+              : weekOffset === 1
+                ? 'Last week'
+                : `${shortDate(weekStart)} to ${shortDate(weekEnd)}`}
+          </h3>
+          <button
+            type="button"
+            aria-label="Next week"
+            disabled={weekOffset === 0}
+            onClick={() => setWeekOffset((o) => o - 1)}
+            className="rounded-md p-1 text-white/50 hover:bg-white/5 hover:text-white/80 disabled:opacity-30"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
         <div className="flex items-center gap-3">
           {counted.length > 0 && (
             <span className="text-xs text-white/50">
@@ -545,7 +541,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
 
       {loadError && <p className="mb-3 text-sm text-red-400">{loadError}</p>}
       {routines === null && !loadError && <p className="text-sm text-white/30">Loading...</p>}
-      {variant === 'page' && !isDemoUser && weekOffset > 1 && (
+      {!isDemoUser && weekOffset > 1 && (
         <p className="mb-3 text-xs text-white/40">Weeks before last week are read only.</p>
       )}
 

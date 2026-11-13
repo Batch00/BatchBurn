@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, ChevronLeft, ChevronRight, Circle, Dumbbell, Plus } from 'lucide-react'
@@ -322,6 +322,16 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     load()
   }, [load, reloadKey])
 
+  // On phones the week scrolls sideways: open on today, or on Sunday for other weeks.
+  const stripRef = useRef<HTMLDivElement>(null)
+  const todayRef = useRef<HTMLDivElement>(null)
+  const loaded = routines !== null
+  useEffect(() => {
+    if (loaded && stripRef.current) {
+      stripRef.current.scrollLeft = todayRef.current?.offsetLeft ?? 0
+    }
+  }, [loaded, weekStart])
+
   // Runs a write, then refreshes server data and reloads the plan.
   async function run(action: () => Promise<string | null>, success: string, touchesActivities = false) {
     setBusy(true)
@@ -545,18 +555,19 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
         <p className="mb-3 text-xs text-white/40">Weeks before last week are read only.</p>
       )}
 
-      {/* Days: compact rows on phones, seven columns from md up */}
+      {/* Days: a sideways-scrolling strip on phones, seven columns from md up */}
       {routines !== null && (
-        <div className="grid gap-1.5 md:grid-cols-7 md:gap-2">
+        <div
+          ref={stripRef}
+          className="relative flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 md:grid md:grid-cols-7 md:overflow-visible md:pb-0"
+        >
           {days.map((d) => {
             const daySessions = sessions.filter((s) => s.date === d)
             const dayActivities = activities.filter((a) => a.date === d)
-            const isEmpty = daySessions.length === 0 && dayActivities.length === 0
-            // Dashboard on phones: only today and days with something on them.
-            const hideOnPhone = variant === 'dashboard' && d !== today && isEmpty
             return (
               <div
                 key={d}
+                ref={d === today ? todayRef : undefined}
                 onDragOver={(e) => {
                   if (!dragId) return
                   e.preventDefault()
@@ -569,9 +580,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                   e.preventDefault()
                   dropOn(d)
                 }}
-                className={`${hideOnPhone ? 'hidden md:flex' : 'flex'} items-start gap-2 rounded-lg border px-2 md:flex-col md:py-2 ${
-                  isEmpty ? 'py-1' : 'py-1.5'
-                } ${
+                className={`flex w-[42%] shrink-0 snap-start flex-col items-start gap-2 rounded-lg border p-2 md:w-auto md:min-w-0 md:shrink ${
                   dragOver === d
                     ? 'border-[#C41230] bg-[#C41230]/10'
                     : d === today
@@ -580,13 +589,11 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                 }`}
               >
                 <p
-                  className={`w-14 shrink-0 pt-0.5 text-xs md:w-auto md:pt-0 ${
-                    d === today ? 'text-[#C41230]' : 'text-white/40'
-                  }`}
+                  className={`text-xs ${d === today ? 'text-[#C41230]' : 'text-white/40'}`}
                 >
                   {dayLabel(d)}
                 </p>
-                <div className="flex min-w-0 flex-1 flex-wrap gap-1.5 md:w-full md:flex-col">
+                <div className="flex w-full flex-1 flex-col gap-1.5">
                   {daySessions.map((s) => {
                     const state = displayState(s, today)
                     const canConfirm = editable && state === 'planned' && s.date <= today
@@ -612,7 +619,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                           setDragId(null)
                           setDragOver(null)
                         }}
-                        className={`flex max-w-full items-start gap-1.5 rounded-lg border-l-2 px-2 py-1.5 text-sm md:w-full ${
+                        className={`flex w-full items-start gap-1.5 rounded-lg border-l-2 px-2 py-1.5 text-sm ${
                           state === 'skipped' || state === 'missed'
                             ? 'border-l-white/10'
                             : (typeColors[s.activity_type] ?? 'border-l-white/20')
@@ -648,7 +655,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                     <Link
                       key={a.id}
                       href={a.href}
-                      className={`max-w-full rounded-lg border border-l-2 border-white/5 px-2 py-1.5 text-xs text-white/60 transition-colors hover:bg-white/[0.07] md:w-full ${
+                      className={`w-full rounded-lg border border-l-2 border-white/5 px-2 py-1.5 text-xs text-white/60 transition-colors hover:bg-white/[0.07] ${
                         typeColors[a.label] ?? 'border-l-white/20'
                       }`}
                     >
@@ -662,10 +669,10 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                     type="button"
                     aria-label={`Add session on ${dayLabel(d)}`}
                     onClick={() => setDialog({ kind: 'add', date: d })}
-                    className="flex shrink-0 items-center gap-1 pt-0.5 text-xs text-white/30 hover:text-white/70 md:pt-0"
+                    className="flex shrink-0 items-center gap-1 text-xs text-white/30 hover:text-white/70"
                   >
                     <Plus className="size-3.5" />
-                    <span className="hidden md:inline">Add</span>
+                    <span>Add</span>
                   </button>
                 )}
               </div>

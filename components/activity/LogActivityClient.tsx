@@ -272,6 +272,7 @@ const CROSS_TYPES = [
   'Stair Master',
   'Swim',
   'Strength',
+  'Stretching',
   'Yoga',
   'Soccer',
   'Tennis',

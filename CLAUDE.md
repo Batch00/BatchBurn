@@ -185,7 +185,8 @@ scripts/garmin-sync/.env (local only, gitignored):
   Easy=#3B82F6, Tempo=#F97316, Long=#16A34A, Fartlek=#EAB308
   Hill=#EF4444, Interval=#EC4899
   Bike=#3B82F6, Walk=#16A34A, Stair Master=#F97316
-  Swim=#06B6D4, Strength=#9333EA, Yoga=#EC4899, Other=#6B7280
+  Swim=#06B6D4, Strength=#9333EA, Stretching=#14B8A6, Yoga=#EC4899,
+  Other=#6B7280
 - Strava source indicator: orange Zap icon (#FC4C02)
 - No inline styles — Tailwind only
 - Flame icon (lucide-react) as app logo mark

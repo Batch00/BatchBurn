@@ -14,6 +14,7 @@ const BADGE_COLORS: Record<string, string> = {
   'Stair Master': 'bg-orange-500/15 text-orange-400',
   Swim: 'bg-cyan-500/15 text-cyan-400',
   Strength: 'bg-purple-500/15 text-purple-400',
+  Stretching: 'bg-teal-500/15 text-teal-400',
   Yoga: 'bg-pink-500/15 text-pink-400',
   Soccer: 'bg-green-600/15 text-green-500',
   Tennis: 'bg-yellow-500/15 text-yellow-400',

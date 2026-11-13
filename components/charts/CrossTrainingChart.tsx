@@ -17,6 +17,7 @@ const CROSS_TYPE_COLORS: Record<string, string> = {
   'Stair Master': '#F97316',
   Swim: '#06B6D4',
   Strength: '#9333EA',
+  Stretching: '#14B8A6',
   Yoga: '#EC4899',
   Soccer: '#16A34A',
   Tennis: '#EAB308',

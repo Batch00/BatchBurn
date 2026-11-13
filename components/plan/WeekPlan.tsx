@@ -72,10 +72,10 @@ function addDays(dateStr: string, n: number): string {
   return toLocalStr(d)
 }
 
-function currentMonday(): string {
+// Plan weeks run Sunday to Saturday.
+function currentSunday(): string {
   const d = new Date()
-  const day = d.getDay()
-  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  d.setDate(d.getDate() - d.getDay())
   return toLocalStr(d)
 }
 
@@ -247,8 +247,8 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
   const [busy, setBusy] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const thisMonday = currentMonday()
-  const weekStart = addDays(thisMonday, -7 * weekOffset)
+  const thisSunday = currentSunday()
+  const weekStart = addDays(thisSunday, -7 * weekOffset)
   const today = toLocalStr(new Date())
   // Catch-up is allowed for the current and previous week only.
   const editable = !isDemoUser && weekOffset <= 1
@@ -270,9 +270,9 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     // Make sure the current and previous week have one row per routine weekday.
     // Conflicts are ignored, so moved or skipped sessions are never recreated.
     if (!isDemoUser) {
-      const monday = currentMonday()
+      const sunday = currentSunday()
       const addons = defaultAddons(list)
-      const rows = [monday, addDays(monday, -7)].flatMap((ws) =>
+      const rows = [sunday, addDays(sunday, -7)].flatMap((ws) =>
         list
           .filter((r) => r.is_active && r.kind === 'session')
           .flatMap((r) =>
@@ -282,7 +282,8 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
               routine_name: r.name,
               week_start: ws,
               slot_weekday: wd,
-              date: addDays(ws, wd - 1),
+              // weekdays are ISO (1 = Monday, 7 = Sunday); Sunday is day 0 of the week
+              date: addDays(ws, wd % 7),
               minutes: r.default_minutes,
               addons,
             })),
@@ -530,14 +531,16 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                   const canConfirm = editable && state === 'planned' && s.date <= today
                   const body = (
                     <>
-                      {state === 'done' && <Check className="size-3.5 shrink-0" />}
-                      <span className="min-w-0 flex-1 truncate">{s.routine_name}</span>
-                      <span className="shrink-0 text-xs opacity-70">
-                        {state === 'missed' ? 'Missed' : `${total} min`}
+                      {state === 'done' && <Check className="mt-0.5 size-3.5 shrink-0" />}
+                      <span className="min-w-0 flex-1">
+                        <span className="block break-words">{s.routine_name}</span>
+                        <span className="block text-xs opacity-70">
+                          {state === 'missed' ? 'Missed' : `${total} min`}
+                        </span>
                       </span>
                     </>
                   )
-                  const base = `flex items-center gap-2 rounded-lg border-l-2 px-2.5 py-2 text-sm ${chipCls[state]}`
+                  const base = `flex items-start gap-2 rounded-lg border-l-2 px-2.5 py-2 text-sm ${chipCls[state]}`
                   if (!editable) {
                     return (
                       <div key={s.id} className={base}>
@@ -549,7 +552,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                     <div key={s.id} className={`${base} transition-colors hover:bg-white/[0.07]`}>
                       <button
                         type="button"
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        className="flex min-w-0 flex-1 items-start gap-2 text-left"
                         onClick={() =>
                           setDialog(
                             canConfirm ? { kind: 'confirm', session: s } : { kind: 'edit', session: s },

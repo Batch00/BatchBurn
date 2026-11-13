@@ -11,6 +11,8 @@ import { Select } from '@/components/ui/select'
 import { ROUTINE_SELECT, type Routine } from './WeekPlan'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+// ISO day numbers in display order: the plan week runs Sunday to Saturday.
+const DAY_ORDER = [7, 1, 2, 3, 4, 5, 6]
 
 const inputCls =
   'border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#C41230] focus-visible:ring-[#C41230]/20'
@@ -102,8 +104,8 @@ function RoutineForm({
         <div className="space-y-1">
           <p className="text-sm text-white/60">Default days</p>
           <div className="flex flex-wrap gap-1">
-            {WEEKDAYS.map((label, i) => {
-              const day = i + 1
+            {DAY_ORDER.map((day) => {
+              const label = WEEKDAYS[day - 1]
               const on = weekdays.includes(day)
               return (
                 <button
@@ -253,7 +255,9 @@ export function RoutinesManager({
                   {r.kind === 'addon'
                     ? `Add-on${r.addon_default ? ', ticked by default' : ''}`
                     : r.weekdays.length > 0
-                      ? r.weekdays.map((d) => WEEKDAYS[d - 1]).join(', ')
+                      ? DAY_ORDER.filter((d) => r.weekdays.includes(d))
+                          .map((d) => WEEKDAYS[d - 1])
+                          .join(', ')
                       : 'No default day'}
                   {r.is_active ? '' : ' · Inactive'}
                 </p>

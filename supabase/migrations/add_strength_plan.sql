@@ -19,7 +19,7 @@ create table batchburn.planned_sessions (
   user_id uuid not null references auth.users(id) on delete cascade,
   routine_id uuid references batchburn.routines(id) on delete set null,
   routine_name text not null,                  -- snapshot, survives routine edits
-  week_start date not null,                    -- Monday of the week it was generated for
+  week_start date not null,                    -- Sunday of the week it was generated for
   slot_weekday smallint,                       -- weekday it was generated from; null for ad hoc
   date date not null,                          -- current planned or actual date (changes on move)
   minutes integer not null,

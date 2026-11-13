@@ -2,8 +2,8 @@ export const revalidate = 0
 
 import { createClient } from '@/lib/supabase/server'
 import { DashboardClient, type WeekBucket, type RawWeeklyRun, type RawWeeklyCross } from '@/components/dashboard/DashboardClient'
-import { ShoeHealthWidget, type Shoe } from '@/components/dashboard/ShoeHealthWidget'
-import { GoalProgress, type Goal } from '@/components/dashboard/GoalProgress'
+import { ShoeHealthWidget } from '@/components/dashboard/ShoeHealthWidget'
+import { GoalProgress } from '@/components/dashboard/GoalProgress'
 import { type Activity } from '@/components/dashboard/ActivityFeed'
 import { RefreshButton } from '@/components/ui/RefreshButton'
 

@@ -8,7 +8,9 @@ import { toast } from '@/lib/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { ROUTINE_SELECT, type Routine } from './WeekPlan'
+import { CROSS_TYPES } from '@/components/history/EditActivityModals'
+import { typeColors } from '@/components/dashboard/ActivityFeed'
+import { ROUTINE_SELECT, addDays, currentSunday, type Routine } from './WeekPlan'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 // ISO day numbers in display order: the plan week runs Sunday to Saturday.
@@ -20,7 +22,7 @@ const primaryBtn =
   'inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-[#C41230] px-3 text-sm font-medium text-white transition-colors hover:bg-[#A10F29] disabled:opacity-50'
 const iconBtn = 'rounded p-1 text-white/40 hover:bg-white/5 hover:text-white/80 disabled:opacity-20'
 
-type RoutineFields = Pick<Routine, 'name' | 'default_minutes' | 'kind' | 'weekdays' | 'addon_default'>
+type RoutineFields = Pick<Routine, 'name' | 'default_minutes' | 'activity_type' | 'weekdays'>
 
 function RoutineForm({
   routine,
@@ -33,9 +35,8 @@ function RoutineForm({
 }) {
   const [name, setName] = useState(routine?.name ?? '')
   const [minutes, setMinutes] = useState(String(routine?.default_minutes ?? 45))
-  const [kind, setKind] = useState<Routine['kind']>(routine?.kind ?? 'session')
+  const [activityType, setActivityType] = useState(routine?.activity_type ?? 'Strength')
   const [weekdays, setWeekdays] = useState<number[]>(routine?.weekdays ?? [])
-  const [addonDefault, setAddonDefault] = useState(routine?.addon_default ?? false)
 
   const mins = Number(minutes)
   const valid = name.trim() !== '' && Number.isInteger(mins) && mins >= 1 && mins <= 600
@@ -52,13 +53,7 @@ function RoutineForm({
       onSubmit={(e) => {
         e.preventDefault()
         if (!valid) return
-        onSubmit({
-          name: name.trim(),
-          default_minutes: mins,
-          kind,
-          weekdays: kind === 'session' ? weekdays : [],
-          addon_default: kind === 'addon' ? addonDefault : false,
-        })
+        onSubmit({ name: name.trim(), default_minutes: mins, activity_type: activityType, weekdays })
       }}
     >
       <div className="space-y-1">
@@ -88,51 +83,41 @@ function RoutineForm({
         />
       </div>
       <div className="space-y-1">
-        <label htmlFor="routine-kind" className="text-sm text-white/60">
-          Type
+        <label htmlFor="routine-type" className="text-sm text-white/60">
+          Activity type
         </label>
         <Select
-          id="routine-kind"
-          value={kind}
-          onChange={(e) => setKind(e.target.value as Routine['kind'])}
+          id="routine-type"
+          value={activityType}
+          onChange={(e) => setActivityType(e.target.value)}
         >
-          <option value="session">Session</option>
-          <option value="addon">Add-on (ticked onto a session)</option>
+          {CROSS_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
         </Select>
       </div>
-      {kind === 'session' ? (
-        <div className="space-y-1">
-          <p className="text-sm text-white/60">Default days</p>
-          <div className="flex flex-wrap gap-1">
-            {DAY_ORDER.map((day) => {
-              const label = WEEKDAYS[day - 1]
-              const on = weekdays.includes(day)
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => toggleDay(day)}
-                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                    on ? 'bg-[#C41230] text-white' : 'bg-white/5 text-white/50 hover:text-white/80'
-                  }`}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
+      <div className="space-y-1">
+        <p className="text-sm text-white/60">Default days</p>
+        <div className="flex flex-wrap gap-1">
+          {DAY_ORDER.map((day) => {
+            const on = weekdays.includes(day)
+            return (
+              <button
+                key={day}
+                type="button"
+                onClick={() => toggleDay(day)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  on ? 'bg-[#C41230] text-white' : 'bg-white/5 text-white/50 hover:text-white/80'
+                }`}
+              >
+                {WEEKDAYS[day - 1]}
+              </button>
+            )
+          })}
         </div>
-      ) : (
-        <label className="flex items-center gap-2 text-sm text-white/80">
-          <input
-            type="checkbox"
-            className="accent-[#C41230]"
-            checked={addonDefault}
-            onChange={(e) => setAddonDefault(e.target.checked)}
-          />
-          Tick on new sessions by default
-        </label>
-      )}
+      </div>
       <button type="submit" className={`${primaryBtn} w-full`} disabled={busy || !valid}>
         Save
       </button>
@@ -186,15 +171,37 @@ export function RoutinesManager({
 
   async function save(fields: RoutineFields) {
     const supabase = createClient()
-    const { error } =
-      editing && editing !== 'new'
-        ? await supabase.from('routines').update(fields).eq('id', editing.id)
-        : await supabase.from('routines').insert({
-            ...fields,
-            user_id: userId,
-            sort_order: routines.reduce((max, r) => Math.max(max, r.sort_order), -1) + 1,
-          })
-    return error ? error.message : null
+    if (editing === null || editing === 'new') {
+      const { error } = await supabase.from('routines').insert({
+        ...fields,
+        user_id: userId,
+        sort_order: routines.reduce((max, r) => Math.max(max, r.sort_order), -1) + 1,
+      })
+      return error ? error.message : null
+    }
+
+    const { error } = await supabase.from('routines').update(fields).eq('id', editing.id)
+    if (error) return error.message
+
+    // Drop this and last week's still-planned sessions for days that no longer
+    // apply, unless they were moved off the day they were generated for.
+    const removedDays = editing.weekdays.filter((d) => !fields.weekdays.includes(d))
+    if (removedDays.length === 0) return null
+    const sunday = currentSunday()
+    const { data: stale, error: sErr } = await supabase
+      .from('planned_sessions')
+      .select('id, week_start, slot_weekday, date')
+      .eq('routine_id', editing.id)
+      .eq('status', 'planned')
+      .in('week_start', [sunday, addDays(sunday, -7)])
+      .in('slot_weekday', removedDays)
+    if (sErr) return sErr.message
+    const ids = (stale ?? [])
+      .filter((s) => s.date === addDays(s.week_start as string, (s.slot_weekday as number) % 7))
+      .map((s) => s.id as string)
+    if (ids.length === 0) return null
+    const { error: dErr } = await supabase.from('planned_sessions').delete().in('id', ids)
+    return dErr ? dErr.message : null
   }
 
   async function setActive(r: Routine, isActive: boolean) {
@@ -244,21 +251,19 @@ export function RoutinesManager({
           {routines.map((r, i) => (
             <div
               key={r.id}
-              className={`flex items-center gap-3 rounded-lg border-l-2 border-purple-500 bg-white/[0.03] px-3 py-2.5 ${
-                r.is_active ? '' : 'opacity-50'
-              }`}
+              className={`flex items-center gap-3 rounded-lg border-l-2 bg-white/[0.03] px-3 py-2.5 ${
+                typeColors[r.activity_type] ?? 'border-l-white/20'
+              } ${r.is_active ? '' : 'opacity-50'}`}
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-white">{r.name}</p>
+                <p className="break-words text-sm text-white">{r.name}</p>
                 <p className="text-xs text-white/40">
-                  {r.default_minutes} min ·{' '}
-                  {r.kind === 'addon'
-                    ? `Add-on${r.addon_default ? ', ticked by default' : ''}`
-                    : r.weekdays.length > 0
-                      ? DAY_ORDER.filter((d) => r.weekdays.includes(d))
-                          .map((d) => WEEKDAYS[d - 1])
-                          .join(', ')
-                      : 'No default day'}
+                  {r.default_minutes} min · {r.activity_type} ·{' '}
+                  {r.weekdays.length > 0
+                    ? DAY_ORDER.filter((d) => r.weekdays.includes(d))
+                        .map((d) => WEEKDAYS[d - 1])
+                        .join(', ')
+                    : 'No default day'}
                   {r.is_active ? '' : ' · Inactive'}
                 </p>
               </div>

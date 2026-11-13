@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronLeft, ChevronRight, Dumbbell, MoreHorizontal, Plus } from 'lucide-react'
+import { CheckCircle, ChevronLeft, ChevronRight, Circle, Dumbbell, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateAll } from '@/lib/actions'
 import { toast } from '@/lib/hooks/use-toast'
+import { typeColors } from '@/components/dashboard/ActivityFeed'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,45 +19,43 @@ export interface Routine {
   id: string
   name: string
   default_minutes: number
-  kind: 'session' | 'addon'
+  activity_type: string
   weekdays: number[]
-  addon_default: boolean
   is_active: boolean
   sort_order: number
-}
-
-interface Addon {
-  name: string
-  minutes: number
 }
 
 interface Session {
   id: string
   routine_id: string | null
   routine_name: string
+  activity_type: string
   week_start: string
   slot_weekday: number | null
   date: string
   minutes: number
-  addons: Addon[]
   status: 'planned' | 'done' | 'skipped'
   cross_training_id: string | null
 }
 
+interface LoggedActivity {
+  id: string
+  href: string
+  date: string
+  label: string
+  distance_miles: number | null
+  duration_seconds: number | null
+}
+
 type DisplayState = 'planned' | 'done' | 'skipped' | 'missed'
 
-type DialogState =
-  | { kind: 'confirm'; session: Session }
-  | { kind: 'edit'; session: Session }
-  | { kind: 'add'; date: string }
-  | null
+type DialogState = { kind: 'details'; session: Session } | { kind: 'add'; date: string } | null
 
 // ---------------------------------------------------------------------------
 // Helpers (local time, same approach as todayStr() in LogActivityClient)
 // ---------------------------------------------------------------------------
 
-export const ROUTINE_SELECT =
-  'id, name, default_minutes, kind, weekdays, addon_default, is_active, sort_order'
+export const ROUTINE_SELECT = 'id, name, default_minutes, activity_type, weekdays, is_active, sort_order'
 
 function toLocalStr(d: Date): string {
   const y = d.getFullYear()
@@ -66,14 +64,14 @@ function toLocalStr(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-function addDays(dateStr: string, n: number): string {
+export function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + 'T00:00:00')
   d.setDate(d.getDate() + n)
   return toLocalStr(d)
 }
 
 // Plan weeks run Sunday to Saturday.
-function currentSunday(): string {
+export function currentSunday(): string {
   const d = new Date()
   d.setDate(d.getDate() - d.getDay())
   return toLocalStr(d)
@@ -86,25 +84,12 @@ function shortDate(dateStr: string): string {
   })
 }
 
+function weekdayShort(dateStr: string): string {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })
+}
+
 function dayLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  return `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()}`
-}
-
-function totalMinutes(minutes: number, addons: Addon[]): number {
-  return minutes + addons.reduce((sum, a) => sum + a.minutes, 0)
-}
-
-function activeAddons(routines: Routine[]): Addon[] {
-  return routines
-    .filter((r) => r.kind === 'addon' && r.is_active)
-    .map((r) => ({ name: r.name, minutes: r.default_minutes }))
-}
-
-function defaultAddons(routines: Routine[]): Addon[] {
-  return routines
-    .filter((r) => r.kind === 'addon' && r.is_active && r.addon_default)
-    .map((r) => ({ name: r.name, minutes: r.default_minutes }))
+  return `${weekdayShort(dateStr)} ${new Date(dateStr + 'T00:00:00').getDate()}`
 }
 
 function displayState(s: Session, today: string): DisplayState {
@@ -114,6 +99,11 @@ function displayState(s: Session, today: string): DisplayState {
   return status
 }
 
+function activityValue(a: LoggedActivity): string {
+  if (a.distance_miles) return `${a.distance_miles.toFixed(1)} mi`
+  return `${Math.round((a.duration_seconds ?? 0) / 60)} min`
+}
+
 const inputCls =
   'border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#C41230] focus-visible:ring-[#C41230]/20'
 const primaryBtn =
@@ -121,71 +111,41 @@ const primaryBtn =
 const secondaryBtn =
   'inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white/70 transition-colors hover:text-white disabled:opacity-50'
 
-const chipCls: Record<DisplayState, string> = {
-  planned: 'border-purple-500 bg-white/[0.03] text-white/80',
-  done: 'border-purple-500 bg-purple-500/15 text-purple-300',
-  skipped: 'border-white/10 text-white/30 line-through',
-  missed: 'border-white/10 text-white/30',
+const stateCls: Record<DisplayState, string> = {
+  planned: 'bg-white/[0.03] text-white/80',
+  done: 'bg-white/10 text-white',
+  skipped: 'text-white/30 line-through',
+  missed: 'text-white/30',
 }
 
 // ---------------------------------------------------------------------------
-// Session form (confirm and edit)
+// Session details (minutes and day)
 // ---------------------------------------------------------------------------
 
-function SessionForm({
+function SessionDetails({
   session,
-  addonOptions,
   days,
-  submitLabel,
   busy,
-  onSubmit,
+  onSave,
 }: {
   session: Session
-  addonOptions: Addon[]
-  days?: string[]
-  submitLabel: string
+  days: string[]
   busy: boolean
-  onSubmit: (values: { date: string; minutes: number; addons: Addon[] }) => void
+  onSave: (values: { date: string; minutes: number }) => void
 }) {
   const [date, setDate] = useState(session.date)
   const [minutes, setMinutes] = useState(String(session.minutes))
-  const [ticked, setTicked] = useState<string[]>(session.addons.map((a) => a.name))
-
-  // The session's own add-ons win, so a renamed or inactive add-on keeps its minutes.
-  const options = [
-    ...session.addons,
-    ...addonOptions.filter((o) => !session.addons.some((a) => a.name === o.name)),
-  ]
-  const chosen = options.filter((o) => ticked.includes(o.name))
   const mins = Number(minutes)
   const valid = Number.isInteger(mins) && mins >= 1 && mins <= 600
-
-  function toggle(name: string) {
-    setTicked((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]))
-  }
 
   return (
     <form
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault()
-        if (valid) onSubmit({ date, minutes: mins, addons: chosen })
+        if (valid) onSave({ date, minutes: mins })
       }}
     >
-      {days && (
-        <div className="space-y-1">
-          <label htmlFor="session-day" className="text-sm text-white/60">
-            Day
-          </label>
-          <Select id="session-day" value={date} onChange={(e) => setDate(e.target.value)}>
-            {days.map((d) => (
-              <option key={d} value={d}>
-                {dayLabel(d)}
-              </option>
-            ))}
-          </Select>
-        </div>
-      )}
       <div className="space-y-1">
         <label htmlFor="session-minutes" className="text-sm text-white/60">
           Minutes
@@ -201,27 +161,26 @@ function SessionForm({
         />
         {!valid && <p className="text-xs text-red-400">Enter 1 to 600 minutes</p>}
       </div>
-      {options.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-sm text-white/60">Add-ons</p>
-          {options.map((o) => (
-            <label key={o.name} className="flex items-center gap-2 text-sm text-white/80">
-              <input
-                type="checkbox"
-                className="accent-[#C41230]"
-                checked={ticked.includes(o.name)}
-                onChange={() => toggle(o.name)}
-              />
-              {o.name} ({o.minutes} min)
-            </label>
+      <div className="space-y-1">
+        <p className="text-sm text-white/60">Day</p>
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDate(d)}
+              className={`flex flex-col items-center rounded-md py-1.5 text-xs transition-colors ${
+                d === date ? 'bg-[#C41230] text-white' : 'bg-white/5 text-white/50 hover:text-white/80'
+              }`}
+            >
+              <span>{weekdayShort(d)}</span>
+              <span className="font-medium">{new Date(d + 'T00:00:00').getDate()}</span>
+            </button>
           ))}
         </div>
-      )}
-      <p className="text-sm text-white/50">
-        Total: {valid ? totalMinutes(mins, chosen) : '--'} min
-      </p>
+      </div>
       <button type="submit" className={`${primaryBtn} w-full`} disabled={busy || !valid}>
-        {submitLabel}
+        Save
       </button>
     </form>
   )
@@ -243,12 +202,16 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
   const [weekOffset, setWeekOffset] = useState(0)
   const [routines, setRoutines] = useState<Routine[] | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
+  const [activities, setActivities] = useState<LoggedActivity[]>([])
   const [dialog, setDialog] = useState<DialogState>(null)
   const [busy, setBusy] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState<string | null>(null)
 
   const thisSunday = currentSunday()
   const weekStart = addDays(thisSunday, -7 * weekOffset)
+  const weekEnd = addDays(weekStart, 6)
   const today = toLocalStr(new Date())
   // Catch-up is allowed for the current and previous week only.
   const editable = !isDemoUser && weekOffset <= 1
@@ -271,21 +234,20 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     // Conflicts are ignored, so moved or skipped sessions are never recreated.
     if (!isDemoUser) {
       const sunday = currentSunday()
-      const addons = defaultAddons(list)
       const rows = [sunday, addDays(sunday, -7)].flatMap((ws) =>
         list
-          .filter((r) => r.is_active && r.kind === 'session')
+          .filter((r) => r.is_active)
           .flatMap((r) =>
             r.weekdays.map((wd) => ({
               user_id: userId,
               routine_id: r.id,
               routine_name: r.name,
+              activity_type: r.activity_type,
               week_start: ws,
               slot_weekday: wd,
               // weekdays are ISO (1 = Monday, 7 = Sunday); Sunday is day 0 of the week
               date: addDays(ws, wd % 7),
               minutes: r.default_minutes,
-              addons,
             })),
           ),
       )
@@ -301,22 +263,60 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
       }
     }
 
-    const { data: sessionRows, error: sErr } = await supabase
-      .from('planned_sessions')
-      .select(
-        'id, routine_id, routine_name, week_start, slot_weekday, date, minutes, addons, status, cross_training_id',
-      )
-      .eq('week_start', weekStart)
-      .order('date')
-      .order('created_at')
-    if (sErr) {
-      setLoadError(sErr.message)
+    const [sessionRes, runRes, crossRes] = await Promise.all([
+      supabase
+        .from('planned_sessions')
+        .select(
+          'id, routine_id, routine_name, activity_type, week_start, slot_weekday, date, minutes, status, cross_training_id',
+        )
+        .eq('week_start', weekStart)
+        .order('date')
+        .order('created_at'),
+      supabase
+        .from('runs')
+        .select('id, date, run_type, distance_miles, duration_seconds')
+        .gte('date', weekStart)
+        .lte('date', weekEnd)
+        .order('date'),
+      supabase
+        .from('cross_training')
+        .select('id, date, activity_type, distance_miles, duration_seconds')
+        .gte('date', weekStart)
+        .lte('date', weekEnd)
+        .order('date'),
+    ])
+    const firstError = sessionRes.error ?? runRes.error ?? crossRes.error
+    if (firstError) {
+      setLoadError(firstError.message)
       return
     }
+    const sessionList = (sessionRes.data ?? []) as Session[]
+    // A cross_training row linked to a session is shown by the session chip.
+    const linked = new Set(sessionList.map((s) => s.cross_training_id).filter(Boolean))
     setRoutines(list)
-    setSessions((sessionRows ?? []) as Session[])
+    setSessions(sessionList)
+    setActivities([
+      ...(runRes.data ?? []).map((r) => ({
+        id: r.id as string,
+        href: `/activities/run/${r.id}`,
+        date: r.date as string,
+        label: (r.run_type as string | null) ?? 'Run',
+        distance_miles: r.distance_miles as number | null,
+        duration_seconds: r.duration_seconds as number | null,
+      })),
+      ...(crossRes.data ?? [])
+        .filter((c) => !linked.has(c.id as string))
+        .map((c) => ({
+          id: c.id as string,
+          href: `/activities/cross/${c.id}`,
+          date: c.date as string,
+          label: (c.activity_type as string | null) ?? 'Cross Training',
+          distance_miles: c.distance_miles as number | null,
+          duration_seconds: c.duration_seconds as number | null,
+        })),
+    ])
     setLoadError(null)
-  }, [userId, isDemoUser, weekStart])
+  }, [userId, isDemoUser, weekStart, weekEnd])
 
   useEffect(() => {
     load()
@@ -338,16 +338,16 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     await load()
   }
 
-  async function confirmSession(s: Session, values: { minutes: number; addons: Addon[] }) {
+  async function confirmSession(s: Session) {
     const supabase = createClient()
-    const done = { status: 'done', minutes: values.minutes, addons: values.addons }
+    const done = { status: 'done' }
 
-    // If the watch already recorded a lift that day, link to it instead of adding one.
+    // If the watch already recorded this activity that day, link to it instead of adding one.
     const { data: garminRows, error: gErr } = await supabase
       .from('cross_training')
       .select('id')
       .eq('date', s.date)
-      .eq('activity_type', 'Strength')
+      .eq('activity_type', s.activity_type)
       .eq('source', 'garmin_csv')
     if (gErr) return gErr.message
     const garminIds = (garminRows ?? []).map((r) => r.id as string)
@@ -373,12 +373,12 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
       .insert({
         user_id: userId,
         date: s.date,
-        activity_type: 'Strength',
-        duration_seconds: totalMinutes(values.minutes, values.addons) * 60,
+        activity_type: s.activity_type,
+        duration_seconds: s.minutes * 60,
         distance_miles: null,
         distance_km: null,
         steps: null,
-        notes: [s.routine_name, ...values.addons.map((a) => a.name)].join(' + '),
+        notes: s.routine_name,
         source: 'manual',
       })
       .select('id')
@@ -392,6 +392,15 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     if (uErr) {
       await supabase.from('cross_training').delete().eq('id', inserted.id)
       return uErr.message
+    }
+    return null
+  }
+
+  // One at a time, so each Garmin link check sees the previous confirms.
+  async function confirmAll(list: Session[]) {
+    for (const s of list) {
+      const err = await confirmSession(s)
+      if (err) return err
     }
     return null
   }
@@ -419,20 +428,30 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     return error ? error.message : null
   }
 
-  async function addSession(routine: Routine, date: string) {
-    const { error } = await createClient()
-      .from('planned_sessions')
-      .insert({
-        user_id: userId,
-        routine_id: routine.id,
-        routine_name: routine.name,
-        week_start: weekStart,
-        slot_weekday: null,
-        date,
-        minutes: routine.default_minutes,
-        addons: defaultAddons(routines ?? []),
-      })
+  async function removeSession(s: Session) {
+    const { error } = await createClient().from('planned_sessions').delete().eq('id', s.id)
     return error ? error.message : null
+  }
+
+  async function addSession(routine: Routine, date: string) {
+    const { error } = await createClient().from('planned_sessions').insert({
+      user_id: userId,
+      routine_id: routine.id,
+      routine_name: routine.name,
+      activity_type: routine.activity_type,
+      week_start: weekStart,
+      slot_weekday: null,
+      date,
+      minutes: routine.default_minutes,
+    })
+    return error ? error.message : null
+  }
+
+  function dropOn(date: string) {
+    const s = sessions.find((x) => x.id === dragId)
+    setDragId(null)
+    setDragOver(null)
+    if (s && s.date !== date) run(() => updateSession(s, { date }), 'Session moved')
   }
 
   // -------------------------------------------------------------------------
@@ -443,7 +462,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
     return (
       <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
         <Dumbbell className="size-4 shrink-0 text-purple-400" />
-        <p className="flex-1 text-sm text-white/60">No strength routines yet.</p>
+        <p className="flex-1 text-sm text-white/60">No routines yet.</p>
         <Link href="/plan" className="text-xs text-[#C41230] hover:underline">
           Set up your plan
         </Link>
@@ -453,8 +472,12 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
 
   const counted = sessions.filter((s) => displayState(s, today) !== 'skipped')
   const doneCount = counted.filter((s) => displayState(s, today) === 'done').length
-  const sessionRoutines = (routines ?? []).filter((r) => r.kind === 'session' && r.is_active)
-  const addonOptions = activeAddons(routines ?? [])
+  const confirmable = editable
+    ? sessions.filter((s) => displayState(s, today) === 'planned' && s.date <= today)
+    : []
+  const activeRoutines = (routines ?? []).filter((r) => r.is_active)
+  const detail = dialog?.kind === 'details' ? dialog.session : null
+  const detailState = detail ? displayState(detail, today) : null
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4">
@@ -477,7 +500,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                 ? 'This week'
                 : weekOffset === 1
                   ? 'Last week'
-                  : `${shortDate(weekStart)} to ${shortDate(addDays(weekStart, 6))}`}
+                  : `${shortDate(weekStart)} to ${shortDate(weekEnd)}`}
             </h3>
             <button
               type="button"
@@ -496,6 +519,22 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
               {doneCount} of {counted.length} done
             </span>
           )}
+          {confirmable.length > 0 && (
+            <button
+              type="button"
+              className={`${primaryBtn} h-7 text-xs`}
+              disabled={busy}
+              onClick={() =>
+                run(
+                  () => confirmAll(confirmable),
+                  `${confirmable.length} ${confirmable.length === 1 ? 'session' : 'sessions'} confirmed`,
+                  true,
+                )
+              }
+            >
+              Confirm all ({confirmable.length})
+            </button>
+          )}
           {variant === 'dashboard' && (
             <Link href="/plan" className="text-xs text-[#C41230] hover:underline">
               Plan
@@ -510,78 +549,127 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
         <p className="mb-3 text-xs text-white/40">Weeks before last week are read only.</p>
       )}
 
-      {/* Days */}
+      {/* Days: compact rows on phones, seven columns from md up */}
       {routines !== null && (
-        <div className="grid gap-2 md:grid-cols-7">
+        <div className="grid gap-1.5 md:grid-cols-7 md:gap-2">
           {days.map((d) => {
             const daySessions = sessions.filter((s) => s.date === d)
+            const dayActivities = activities.filter((a) => a.date === d)
+            const isEmpty = daySessions.length === 0 && dayActivities.length === 0
+            // Dashboard on phones: only today and days with something on them.
+            const hideOnPhone = variant === 'dashboard' && d !== today && isEmpty
             return (
               <div
                 key={d}
-                className={`flex flex-col gap-1.5 rounded-lg border p-2 ${
-                  d === today ? 'border-[#C41230]/50' : 'border-white/5'
+                onDragOver={(e) => {
+                  if (!dragId) return
+                  e.preventDefault()
+                  setDragOver(d)
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(null)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  dropOn(d)
+                }}
+                className={`${hideOnPhone ? 'hidden md:flex' : 'flex'} items-start gap-2 rounded-lg border px-2 md:flex-col md:py-2 ${
+                  isEmpty ? 'py-1' : 'py-1.5'
+                } ${
+                  dragOver === d
+                    ? 'border-[#C41230] bg-[#C41230]/10'
+                    : d === today
+                      ? 'border-[#C41230]/50'
+                      : 'border-white/5'
                 }`}
               >
-                <p className={`text-xs ${d === today ? 'text-[#C41230]' : 'text-white/40'}`}>
+                <p
+                  className={`w-14 shrink-0 pt-0.5 text-xs md:w-auto md:pt-0 ${
+                    d === today ? 'text-[#C41230]' : 'text-white/40'
+                  }`}
+                >
                   {dayLabel(d)}
                 </p>
-                {daySessions.map((s) => {
-                  const state = displayState(s, today)
-                  const total = totalMinutes(s.minutes, s.addons)
-                  const canConfirm = editable && state === 'planned' && s.date <= today
-                  const body = (
-                    <>
-                      {state === 'done' && <Check className="mt-0.5 size-3.5 shrink-0" />}
-                      <span className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-1 flex-wrap gap-1.5 md:w-full md:flex-col">
+                  {daySessions.map((s) => {
+                    const state = displayState(s, today)
+                    const canConfirm = editable && state === 'planned' && s.date <= today
+                    const canDrag = editable && state === 'planned'
+                    const text = (
+                      <>
                         <span className="block break-words">{s.routine_name}</span>
                         <span className="block text-xs opacity-70">
-                          {state === 'missed' ? 'Missed' : `${total} min`}
+                          {state === 'missed' ? 'Missed' : `${s.minutes} min`}
                         </span>
-                      </span>
-                    </>
-                  )
-                  const base = `flex items-start gap-2 rounded-lg border-l-2 px-2.5 py-2 text-sm ${chipCls[state]}`
-                  if (!editable) {
+                      </>
+                    )
                     return (
-                      <div key={s.id} className={base}>
-                        {body}
+                      <div
+                        key={s.id}
+                        draggable={canDrag}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', s.id)
+                          e.dataTransfer.effectAllowed = 'move'
+                          setDragId(s.id)
+                        }}
+                        onDragEnd={() => {
+                          setDragId(null)
+                          setDragOver(null)
+                        }}
+                        className={`flex max-w-full items-start gap-1.5 rounded-lg border-l-2 px-2 py-1.5 text-sm md:w-full ${
+                          state === 'skipped' || state === 'missed'
+                            ? 'border-l-white/10'
+                            : (typeColors[s.activity_type] ?? 'border-l-white/20')
+                        } ${stateCls[state]} ${canDrag ? 'md:cursor-grab' : ''}`}
+                      >
+                        {canConfirm && (
+                          <button
+                            type="button"
+                            aria-label={`Confirm ${s.routine_name}`}
+                            disabled={busy}
+                            onClick={() => run(() => confirmSession(s), 'Workout confirmed', true)}
+                            className="shrink-0 text-white/40 transition-colors hover:text-green-400 disabled:opacity-50"
+                          >
+                            <Circle className="size-4" />
+                          </button>
+                        )}
+                        {state === 'done' && <CheckCircle className="size-4 shrink-0 text-green-400" />}
+                        {editable ? (
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 text-left"
+                            onClick={() => setDialog({ kind: 'details', session: s })}
+                          >
+                            {text}
+                          </button>
+                        ) : (
+                          <span className="min-w-0 flex-1">{text}</span>
+                        )}
                       </div>
                     )
-                  }
-                  return (
-                    <div key={s.id} className={`${base} transition-colors hover:bg-white/[0.07]`}>
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-start gap-2 text-left"
-                        onClick={() =>
-                          setDialog(
-                            canConfirm ? { kind: 'confirm', session: s } : { kind: 'edit', session: s },
-                          )
-                        }
-                      >
-                        {body}
-                      </button>
-                      {state === 'planned' && (
-                        <button
-                          type="button"
-                          aria-label="Session options"
-                          onClick={() => setDialog({ kind: 'edit', session: s })}
-                          className="shrink-0 rounded p-0.5 text-white/40 hover:text-white/80"
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
+                  })}
+                  {dayActivities.map((a) => (
+                    <Link
+                      key={a.id}
+                      href={a.href}
+                      className={`max-w-full rounded-lg border border-l-2 border-white/5 px-2 py-1.5 text-xs text-white/60 transition-colors hover:bg-white/[0.07] md:w-full ${
+                        typeColors[a.label] ?? 'border-l-white/20'
+                      }`}
+                    >
+                      <span className="block break-words">{a.label}</span>
+                      <span className="block opacity-70">{activityValue(a)}</span>
+                    </Link>
+                  ))}
+                </div>
                 {editable && (
                   <button
                     type="button"
+                    aria-label={`Add session on ${dayLabel(d)}`}
                     onClick={() => setDialog({ kind: 'add', date: d })}
-                    className="flex items-center gap-1 text-xs text-white/30 hover:text-white/70"
+                    className="flex shrink-0 items-center gap-1 pt-0.5 text-xs text-white/30 hover:text-white/70 md:pt-0"
                   >
-                    <Plus className="size-3" />
-                    Add
+                    <Plus className="size-3.5" />
+                    <span className="hidden md:inline">Add</span>
                   </button>
                 )}
               </div>
@@ -593,81 +681,65 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
       {/* Dialogs */}
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-sm">
-          {dialog?.kind === 'confirm' && (
+          {detail && (
             <>
               <DialogHeader>
-                <DialogTitle>Confirm {dialog.session.routine_name}</DialogTitle>
-                <p className="text-sm text-white/50">{dayLabel(dialog.session.date)}</p>
+                <DialogTitle className="break-words pr-6">{detail.routine_name}</DialogTitle>
+                <p className="text-sm text-white/50">
+                  {detail.activity_type} · {dayLabel(detail.date)}
+                </p>
               </DialogHeader>
-              <SessionForm
-                key={dialog.session.id}
-                session={dialog.session}
-                addonOptions={addonOptions}
-                submitLabel="Confirm workout"
-                busy={busy}
-                onSubmit={(values) =>
-                  run(() => confirmSession(dialog.session, values), 'Workout confirmed', true)
-                }
-              />
-            </>
-          )}
-
-          {dialog?.kind === 'edit' && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{dialog.session.routine_name}</DialogTitle>
-                <p className="text-sm text-white/50">{dayLabel(dialog.session.date)}</p>
-              </DialogHeader>
-              {displayState(dialog.session, today) === 'done' && (
+              {detailState === 'done' && (
                 <div className="space-y-4">
-                  <p className="text-sm text-white/60">
-                    Done, {totalMinutes(dialog.session.minutes, dialog.session.addons)} min.
-                  </p>
+                  <p className="text-sm text-white/60">Done, {detail.minutes} min.</p>
                   <button
                     type="button"
                     className={`${secondaryBtn} w-full`}
                     disabled={busy}
-                    onClick={() => run(() => undoSession(dialog.session), 'Workout undone', true)}
+                    onClick={() => run(() => undoSession(detail), 'Workout undone', true)}
                   >
                     Undo
                   </button>
                 </div>
               )}
-              {displayState(dialog.session, today) === 'skipped' && (
+              {detailState === 'skipped' && (
                 <button
                   type="button"
                   className={`${secondaryBtn} w-full`}
                   disabled={busy}
-                  onClick={() =>
-                    run(() => updateSession(dialog.session, { status: 'planned' }), 'Session restored')
-                  }
+                  onClick={() => run(() => updateSession(detail, { status: 'planned' }), 'Session restored')}
                 >
                   Unskip
                 </button>
               )}
-              {displayState(dialog.session, today) === 'planned' && (
+              {detailState === 'planned' && (
                 <div className="space-y-3">
-                  <SessionForm
-                    key={dialog.session.id}
-                    session={dialog.session}
-                    addonOptions={addonOptions}
+                  <SessionDetails
+                    key={detail.id}
+                    session={detail}
                     days={days}
-                    submitLabel="Save"
                     busy={busy}
-                    onSubmit={(values) =>
-                      run(() => updateSession(dialog.session, values), 'Session updated')
-                    }
+                    onSave={(values) => run(() => updateSession(detail, values), 'Session updated')}
                   />
-                  <button
-                    type="button"
-                    className={`${secondaryBtn} w-full`}
-                    disabled={busy}
-                    onClick={() =>
-                      run(() => updateSession(dialog.session, { status: 'skipped' }), 'Session skipped')
-                    }
-                  >
-                    Skip
-                  </button>
+                  {detail.slot_weekday === null ? (
+                    <button
+                      type="button"
+                      className={`${secondaryBtn} w-full`}
+                      disabled={busy}
+                      onClick={() => run(() => removeSession(detail), 'Session removed')}
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`${secondaryBtn} w-full`}
+                      disabled={busy}
+                      onClick={() => run(() => updateSession(detail, { status: 'skipped' }), 'Session skipped')}
+                    >
+                      Skip
+                    </button>
+                  )}
                 </div>
               )}
             </>
@@ -679,7 +751,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                 <DialogTitle>Add session</DialogTitle>
                 <p className="text-sm text-white/50">{dayLabel(dialog.date)}</p>
               </DialogHeader>
-              {sessionRoutines.length === 0 ? (
+              {activeRoutines.length === 0 ? (
                 <p className="text-sm text-white/60">
                   Add a routine on the{' '}
                   <Link href="/plan" className="text-[#C41230] hover:underline">
@@ -689,16 +761,18 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {sessionRoutines.map((r) => (
+                  {activeRoutines.map((r) => (
                     <button
                       key={r.id}
                       type="button"
                       disabled={busy}
                       onClick={() => run(() => addSession(r, dialog.date), 'Session added')}
-                      className="flex w-full items-center justify-between rounded-lg border-l-2 border-purple-500 bg-white/[0.03] px-3 py-2 text-left text-sm text-white/80 transition-colors hover:bg-white/[0.07] disabled:opacity-50"
+                      className={`flex w-full items-start justify-between gap-3 rounded-lg border-l-2 bg-white/[0.03] px-3 py-2 text-left text-sm text-white/80 transition-colors hover:bg-white/[0.07] disabled:opacity-50 ${
+                        typeColors[r.activity_type] ?? 'border-l-white/20'
+                      }`}
                     >
-                      <span>{r.name}</span>
-                      <span className="text-xs text-white/50">{r.default_minutes} min</span>
+                      <span className="min-w-0 break-words">{r.name}</span>
+                      <span className="shrink-0 text-xs text-white/50">{r.default_minutes} min</span>
                     </button>
                   ))}
                 </div>

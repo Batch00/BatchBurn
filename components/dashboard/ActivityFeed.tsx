@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Zap, Watch } from 'lucide-react'
 import { formatPace, formatDuration } from '@/lib/utils/pace'
 
-const typeColors: Record<string, string> = {
+export const typeColors: Record<string, string> = {
   Easy: 'border-l-blue-500',
   Tempo: 'border-l-orange-500',
   Long: 'border-l-green-700',

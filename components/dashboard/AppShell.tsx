@@ -69,7 +69,7 @@ export function AppShell({ userEmail, isDemoUser = false, children }: AppShellPr
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0D1117]">
+    <div className="flex h-dvh overflow-hidden bg-[#0D1117]">
       {/* Desktop Sidebar */}
       <aside
         className={`hidden flex-col border-r border-white/10 bg-[#0D1117] transition-all duration-200 md:flex ${
@@ -133,7 +133,7 @@ export function AppShell({ userEmail, isDemoUser = false, children }: AppShellPr
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
+      <main className="flex-1 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0">
         {isDemoUser && (
           <div className="border-b border-amber-700/50 bg-amber-900/40 py-2 text-center text-sm text-amber-200">
             You are in demo mode — data resets nightly.{' '}

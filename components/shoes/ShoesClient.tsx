@@ -138,7 +138,7 @@ function EditShoeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/70 p-4">
       <div className="my-auto w-full max-w-md rounded-xl border border-white/10 bg-[#161B22] p-6 shadow-xl">
         <h2 className="mb-4 text-lg font-semibold text-white">Edit Shoe</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -735,7 +735,7 @@ export function ShoesClient({
             <Plus className="size-4" />
             Add Shoe
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Add Shoe</DialogTitle>
             </DialogHeader>

@@ -683,7 +683,7 @@ export function WeekPlan({ userId, isDemoUser, variant, reloadKey = 0 }: WeekPla
 
       {/* Dialogs */}
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-sm">
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-sm">
           {detail && (
             <>
               <DialogHeader>

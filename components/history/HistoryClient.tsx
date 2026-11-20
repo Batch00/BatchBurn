@@ -733,8 +733,8 @@ export function HistoryClient({ initialActivities, userId, isDemoUser = false, h
 
       {/* Change Type modal */}
       {showChangeType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#161B22] p-6 shadow-xl">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/70 p-4">
+          <div className="my-auto w-full max-w-md rounded-xl border border-white/10 bg-[#161B22] p-6 shadow-xl">
             <h2 className="mb-1 text-lg font-semibold text-white">Change Activity Type</h2>
             <p className="mb-4 text-sm text-white/50">
               Type change only applies to cross training activities. Any selected runs are skipped.

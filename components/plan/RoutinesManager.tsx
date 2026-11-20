@@ -313,7 +313,7 @@ export function RoutinesManager({
       )}
 
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-sm">
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{editing === 'new' ? 'Add routine' : 'Edit routine'}</DialogTitle>
           </DialogHeader>

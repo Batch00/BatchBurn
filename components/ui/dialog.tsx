@@ -27,7 +27,7 @@ function DialogContent({
     <DialogPortal>
       <DialogPrimitive.Popup
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-[#0D1117] p-6 shadow-xl focus:outline-none',
+          'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-[#0D1117] p-6 shadow-xl focus:outline-none',
           className,
         )}
         {...props}

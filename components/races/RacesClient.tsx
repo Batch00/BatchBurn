@@ -37,12 +37,14 @@ export type RaceRow = {
   overall_competitors: number | null
   age_group_place: number | null
   age_group_competitors: number | null
+  shoe_id: string | null
   notes: string | null
 }
 
 export type ShoeOption = {
   id: string
   name: string
+  is_active: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +81,11 @@ function formatRaceDate(dateStr: string): string {
   })
 }
 
+function todayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function secondsToHMS(total: number) {
   return {
     hh: Math.floor(total / 3600),
@@ -104,6 +111,8 @@ function EditRaceModal({
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const { hh, mm, ss } = secondsToHMS(race.duration_seconds)
+  // Active shoes, plus the race's own shoe if it has since been retired
+  const shoeOptions = shoes.filter((s) => s.is_active || s.id === race.shoe_id)
 
   const {
     register,
@@ -122,7 +131,7 @@ function EditRaceModal({
       overall_competitors: race.overall_competitors ?? ('' as unknown as number),
       age_group_place: race.age_group_place ?? ('' as unknown as number),
       age_group_competitors: race.age_group_competitors ?? ('' as unknown as number),
-      shoe_id: '',
+      shoe_id: race.shoe_id ?? '',
       notes: race.notes ?? '',
     },
   })
@@ -324,14 +333,14 @@ function EditRaceModal({
             </div>
           </div>
 
-          {shoes.length > 0 && (
+          {shoeOptions.length > 0 && (
             <div className="space-y-1">
               <Label htmlFor="edit-race-shoe" className="text-sm text-white/60">
                 Shoe <span className="text-white/30">(optional)</span>
               </Label>
               <Select id="edit-race-shoe" {...register('shoe_id')}>
-                <option value="">— Select shoe —</option>
-                {shoes.map((s) => (
+                <option value="">— No shoe —</option>
+                {shoeOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -391,6 +400,7 @@ function AddRaceForm({
   onSuccess: () => void
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const activeShoes = shoes.filter((s) => s.is_active)
 
   const {
     register,
@@ -401,7 +411,7 @@ function AddRaceForm({
     resolver: zodResolver(raceSchema),
     defaultValues: {
       event_name: '',
-      date: '',
+      date: todayStr(),
       distance_miles: '' as unknown as number,
       hours: '' as unknown as number,
       minutes: '' as unknown as number,
@@ -429,7 +439,7 @@ function AddRaceForm({
       return
     }
 
-    const pace_per_mile_seconds = duration_seconds / data.distance_miles
+    const pace_per_mile_seconds = Math.round(duration_seconds / data.distance_miles)
 
     const { data: existingRaces } = await supabase
       .from('races')
@@ -491,7 +501,7 @@ function AddRaceForm({
       return
     }
 
-    reset()
+    reset({ event_name: '', date: todayStr(), shoe_id: '', notes: '' })
     onSuccess()
   }
 
@@ -512,7 +522,7 @@ function AddRaceForm({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
         <div className="space-y-1">
           <Label htmlFor="race-date" className="text-sm text-white/60">
             Date
@@ -586,7 +596,7 @@ function AddRaceForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
         <div className="space-y-1">
           <Label htmlFor="race-overall-place" className="text-sm text-white/60">
             Overall Place <span className="text-white/30">(optional)</span>
@@ -615,7 +625,7 @@ function AddRaceForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
         <div className="space-y-1">
           <Label htmlFor="race-ag-place" className="text-sm text-white/60">
             Age Group Place <span className="text-white/30">(optional)</span>
@@ -644,14 +654,14 @@ function AddRaceForm({
         </div>
       </div>
 
-      {shoes.length > 0 && (
+      {activeShoes.length > 0 && (
         <div className="space-y-1">
           <Label htmlFor="race-shoe" className="text-sm text-white/60">
             Shoe <span className="text-white/30">(optional)</span>
           </Label>
           <Select id="race-shoe" {...register('shoe_id')}>
-            <option value="">— Select shoe —</option>
-            {shoes.map((s) => (
+            <option value="">— No shoe —</option>
+            {activeShoes.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
@@ -714,6 +724,7 @@ function RaceCard({
   const [deleting, setDeleting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const shoeName = shoes.find((s) => s.id === race.shoe_id)?.name ?? null
 
   useEffect(() => {
     if (!menuOpen) return
@@ -791,6 +802,7 @@ function RaceCard({
             </div>
             <p className="mt-0.5 text-sm text-white/50">
               {formatRaceDate(race.date)} · {race.distance_miles.toFixed(1)} mi
+              {shoeName && <> · {shoeName}</>}
             </p>
           </div>
 
@@ -902,7 +914,7 @@ export function RacesClient({ initialRaces, shoes, userId, isDemoUser = false }:
     const { data } = await supabase
       .from('races')
       .select(
-        'id, event_name, date, distance_miles, duration_seconds, pace_per_mile_seconds, is_pr, overall_place, overall_competitors, age_group_place, age_group_competitors, notes',
+        'id, event_name, date, distance_miles, duration_seconds, pace_per_mile_seconds, is_pr, overall_place, overall_competitors, age_group_place, age_group_competitors, shoe_id, notes',
       )
       .eq('user_id', userId)
       .order('date', { ascending: false })
@@ -921,6 +933,7 @@ export function RacesClient({ initialRaces, shoes, userId, isDemoUser = false }:
           overall_competitors: r.overall_competitors as number | null,
           age_group_place: r.age_group_place as number | null,
           age_group_competitors: r.age_group_competitors as number | null,
+          shoe_id: r.shoe_id as string | null,
           notes: r.notes as string | null,
         })),
       )

@@ -15,15 +15,14 @@ export default async function RacesPage() {
     supabase
       .from('races')
       .select(
-        'id, event_name, date, distance_miles, duration_seconds, pace_per_mile_seconds, is_pr, overall_place, overall_competitors, age_group_place, age_group_competitors, notes',
+        'id, event_name, date, distance_miles, duration_seconds, pace_per_mile_seconds, is_pr, overall_place, overall_competitors, age_group_place, age_group_competitors, shoe_id, notes',
       )
       .eq('user_id', userId)
       .order('date', { ascending: false }),
     supabase
       .from('shoes')
-      .select('id, name')
+      .select('id, name, is_active')
       .eq('user_id', userId)
-      .eq('is_active', true)
       .order('name'),
   ])
 
@@ -39,12 +38,14 @@ export default async function RacesPage() {
     overall_competitors: r.overall_competitors as number | null,
     age_group_place: r.age_group_place as number | null,
     age_group_competitors: r.age_group_competitors as number | null,
+    shoe_id: r.shoe_id as string | null,
     notes: r.notes as string | null,
   }))
 
   const shoes: ShoeOption[] = (shoesData ?? []).map((s) => ({
     id: s.id as string,
     name: s.name as string,
+    is_active: s.is_active as boolean,
   }))
 
   return (

@@ -107,7 +107,7 @@ export function AnalyticsClient({
             onClick={() => setPeriod(opt.value)}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               period === opt.value
-                ? 'bg-[#00D4AA] text-[#0D1117]'
+                ? 'bg-[#C41230] text-white'
                 : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
             }`}
           >

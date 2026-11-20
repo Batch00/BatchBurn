@@ -409,7 +409,7 @@ export function SettingsClient({
               href="https://www.batch-apps.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#00D4AA] hover:underline"
+              className="text-[#C41230] hover:underline"
             >
               batch-apps.com
             </a>

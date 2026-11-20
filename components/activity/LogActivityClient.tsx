@@ -23,7 +23,6 @@ import { revalidateAll } from '@/lib/actions'
 export type Shoe = {
   id: string
   name: string
-  current_miles: number
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +64,17 @@ const runSchema = z
     path: ['minutes'],
   })
 
-function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
+function RunForm({
+  shoes,
+  userId,
+  primaryShoeId,
+}: {
+  shoes: Shoe[]
+  userId: string
+  primaryShoeId: string
+}) {
+  // Pre-select the primary shoe, same as Garmin imports, if it is still active
+  const defaultShoeId = shoes.some((s) => s.id === primaryShoeId) ? primaryShoeId : ''
   const router = useRouter()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -80,7 +89,7 @@ function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
     defaultValues: {
       date: todayStr(),
       type: 'Easy',
-      shoe_id: '',
+      shoe_id: defaultShoeId,
       notes: '',
     },
   })
@@ -121,7 +130,7 @@ function RunForm({ shoes, userId }: { shoes: Shoe[]; userId: string }) {
 
     toast('Run logged successfully!')
     await revalidateAll()
-    reset({ date: todayStr(), type: 'Easy', shoe_id: '', notes: '' })
+    reset({ date: todayStr(), type: 'Easy', shoe_id: defaultShoeId, notes: '' })
     setTimeout(() => router.push('/dashboard'), 1500)
   }
 
@@ -500,11 +509,13 @@ export function LogActivityClient({
   userId,
   isDemoUser = false,
   hiddenTypes = [],
+  primaryShoeId = '',
 }: {
   shoes: Shoe[]
   userId: string
   isDemoUser?: boolean
   hiddenTypes?: string[]
+  primaryShoeId?: string
 }) {
   const [activeTab, setActiveTab] = useState<'run' | 'cross'>('run')
 
@@ -517,7 +528,7 @@ export function LogActivityClient({
             href="https://www.batch-apps.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#00D4AA] underline"
+            className="text-[#C41230] underline"
           >
             Request access
           </a>{' '}
@@ -553,7 +564,7 @@ export function LogActivityClient({
       </div>
 
       {activeTab === 'run' ? (
-        <RunForm shoes={shoes} userId={userId} />
+        <RunForm shoes={shoes} userId={userId} primaryShoeId={primaryShoeId} />
       ) : (
         <CrossTrainingForm userId={userId} hiddenTypes={hiddenTypes} />
       )}

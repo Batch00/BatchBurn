@@ -12,18 +12,19 @@ export default async function LogPage() {
   const [{ data: shoes }, { data: profile }] = await Promise.all([
     supabase
       .from('shoes')
-      .select('id, name, current_miles')
+      .select('id, name')
       .eq('user_id', user!.id)
       .eq('is_active', true)
       .order('name'),
     supabase
       .from('profiles')
-      .select('hidden_activity_types')
+      .select('hidden_activity_types, primary_shoe_id')
       .eq('user_id', user!.id)
       .single(),
   ])
 
   const hiddenTypes = (profile?.hidden_activity_types as string[] | null) ?? []
+  const primaryShoeId = (profile?.primary_shoe_id as string | null) ?? ''
 
   return (
     <div className="mx-auto max-w-2xl p-4 md:p-6">
@@ -33,6 +34,7 @@ export default async function LogPage() {
         userId={user!.id}
         isDemoUser={isDemoUser}
         hiddenTypes={hiddenTypes}
+        primaryShoeId={primaryShoeId}
       />
     </div>
   )

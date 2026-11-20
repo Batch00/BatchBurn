@@ -585,7 +585,7 @@ function AddShoeForm({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
         <div className="space-y-1">
           <Label htmlFor="shoe-price" className="text-sm text-white/60">
             Price <span className="text-white/30">(optional)</span>

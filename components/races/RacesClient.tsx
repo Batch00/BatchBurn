@@ -86,6 +86,26 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// Within each distance (±0.1 mi), the fastest race is the PR. Run after any
+// add, edit or delete so the flags never go stale.
+async function recomputePrs(supabase: ReturnType<typeof createClient>) {
+  const { data } = await supabase
+    .from('races')
+    .select('id, distance_miles, duration_seconds, is_pr')
+  if (!data) return
+  const changes = data.filter((r) => {
+    const best = Math.min(
+      ...data
+        .filter((o) => Math.abs((o.distance_miles as number) - (r.distance_miles as number)) <= 0.1)
+        .map((o) => o.duration_seconds as number),
+    )
+    return ((r.duration_seconds as number) === best) !== r.is_pr
+  })
+  await Promise.all(
+    changes.map((r) => supabase.from('races').update({ is_pr: !r.is_pr }).eq('id', r.id)),
+  )
+}
+
 function secondsToHMS(total: number) {
   return {
     hh: Math.floor(total / 3600),
@@ -185,6 +205,7 @@ function EditRaceModal({
       setSubmitError(error.message)
       return
     }
+    await recomputePrs(supabase)
     onSaved()
   }
 
@@ -441,33 +462,6 @@ function AddRaceForm({
 
     const pace_per_mile_seconds = Math.round(duration_seconds / data.distance_miles)
 
-    const { data: existingRaces } = await supabase
-      .from('races')
-      .select('id, duration_seconds, is_pr')
-      .gte('distance_miles', data.distance_miles - 0.1)
-      .lte('distance_miles', data.distance_miles + 0.1)
-
-    let is_pr = false
-    if (!existingRaces || existingRaces.length === 0) {
-      is_pr = true
-    } else {
-      const allSlower = existingRaces.every(
-        (r) => duration_seconds < (r.duration_seconds as number),
-      )
-      if (allSlower) {
-        is_pr = true
-        const prevPrIds = existingRaces
-          .filter((r) => r.is_pr)
-          .map((r) => r.id as string)
-        if (prevPrIds.length > 0) {
-          await supabase
-            .from('races')
-            .update({ is_pr: false })
-            .in('id', prevPrIds)
-        }
-      }
-    }
-
     const { error } = await supabase.from('races').insert({
       user_id: userId,
       event_name: data.event_name,
@@ -475,7 +469,7 @@ function AddRaceForm({
       distance_miles: data.distance_miles,
       duration_seconds,
       pace_per_mile_seconds,
-      is_pr,
+      is_pr: false,
       overall_place:
         data.overall_place !== '' && data.overall_place != null
           ? Number(data.overall_place)
@@ -501,6 +495,7 @@ function AddRaceForm({
       return
     }
 
+    await recomputePrs(supabase)
     reset({ event_name: '', date: todayStr(), shoe_id: '', notes: '' })
     onSuccess()
   }
@@ -741,6 +736,7 @@ function RaceCard({
     setDeleting(true)
     const supabase = createClient()
     await supabase.from('races').delete().eq('id', race.id)
+    await recomputePrs(supabase)
     setDeleting(false)
     setConfirmDelete(false)
     router.refresh()

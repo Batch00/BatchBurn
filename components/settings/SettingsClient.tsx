@@ -73,6 +73,7 @@ interface SettingsClientProps {
   displayName: string
   isDemoUser?: boolean
   hiddenTypes?: string[]
+  lastGarminSyncAt?: string | null
 }
 
 export function SettingsClient({
@@ -81,6 +82,7 @@ export function SettingsClient({
   displayName: initialDisplayName,
   isDemoUser = false,
   hiddenTypes: initialHiddenTypes = [],
+  lastGarminSyncAt = null,
 }: SettingsClientProps) {
   const router = useRouter()
 
@@ -310,6 +312,20 @@ export function SettingsClient({
               <p className="text-sm font-medium text-white">Import from Garmin</p>
               <p className="text-xs text-white/40">
                 Export your activities as CSV from connect.garmin.com (desktop browser) and upload here
+              </p>
+              <p className="text-xs text-white/60">
+                Last synced:{' '}
+                {/* Local time differs between server and browser render */}
+                <span suppressHydrationWarning>
+                  {lastGarminSyncAt
+                    ? new Date(lastGarminSyncAt).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    : 'Never'}
+                </span>
               </p>
               <p className="text-xs text-white/40">
                 Export your activities:{' '}

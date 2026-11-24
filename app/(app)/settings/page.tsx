@@ -12,12 +12,13 @@ export default async function SettingsPage() {
 
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, hidden_activity_types')
+    .select('display_name, hidden_activity_types, last_garmin_sync_at')
     .eq('user_id', userId)
     .single()
 
   const displayName = (profileData?.display_name as string | null) ?? ''
   const hiddenTypes = (profileData?.hidden_activity_types as string[] | null) ?? []
+  const lastGarminSyncAt = (profileData?.last_garmin_sync_at as string | null) ?? null
 
   return (
     <div className="mx-auto max-w-2xl p-4 md:p-6">
@@ -28,6 +29,7 @@ export default async function SettingsPage() {
         displayName={displayName}
         isDemoUser={isDemoUser}
         hiddenTypes={hiddenTypes}
+        lastGarminSyncAt={lastGarminSyncAt}
       />
     </div>
   )

@@ -204,5 +204,12 @@ export async function POST(req: NextRequest) {
     imported++
   }
 
+  // Record the sync even when nothing new was imported, so the dashboard
+  // banner can tell "synced, nothing new" apart from "not synced".
+  await supabase
+    .from('profiles')
+    .update({ last_garmin_sync_at: new Date().toISOString() })
+    .eq('user_id', userId)
+
   return NextResponse.json({ imported, skipped, errors })
 }

@@ -55,6 +55,7 @@ export default async function DashboardPage() {
     { data: goals },
     { data: lastGarminRun },
     { data: lastGarminCross },
+    { data: garminProfile },
   ] = await Promise.all([
     // WTD runs
     supabase
@@ -158,6 +159,12 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Last successful Garmin sync, set even when nothing new was imported
+    supabase
+      .from('profiles')
+      .select('last_garmin_sync_at')
+      .eq('user_id', userId)
+      .maybeSingle(),
   ])
 
   // Compute KPIs
@@ -260,10 +267,11 @@ export default async function DashboardPage() {
     })),
   ].sort((a, b) => b.date.localeCompare(a.date))
 
-  // Days since the most recent Garmin CSV import (null if never imported)
+  // Days since the most recent Garmin sync or imported row (null if never)
   const garminTimestamps = [
     lastGarminRun?.created_at as string | undefined,
     lastGarminCross?.created_at as string | undefined,
+    garminProfile?.last_garmin_sync_at as string | undefined,
   ].filter((t): t is string => !!t)
   const daysSinceGarminImport =
     garminTimestamps.length === 0
